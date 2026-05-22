@@ -1,15 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Outlet } from "@tanstack/react-router";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { MobileNav } from "./MobileNav";
 import { NewItemModal } from "@/components/vault/NewItemModal";
+import { ShareModal } from "@/components/vault/ShareModal";
 import { useVault } from "@/lib/vault-store";
+import { useUI } from "@/lib/ui-store";
 
 export function AppShell() {
-  const [newOpen, setNewOpen] = useState(false);
-  const [query, setQuery] = useState("");
   const theme = useVault((s) => s.theme);
+  const { query, setQuery, newOpen, setNewOpen } = useUI();
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -29,7 +30,7 @@ export function AppShell() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [setNewOpen]);
 
   return (
     <div className="canvas-bg min-h-screen w-full">
@@ -39,19 +40,14 @@ export function AppShell() {
           <div className="flex-1 flex flex-col min-w-0">
             <TopBar query={query} onQuery={setQuery} onNew={() => setNewOpen(true)} />
             <main className="flex-1 min-h-0 overflow-hidden">
-              <Outlet context={{ query, setQuery, openNew: () => setNewOpen(true) }} />
+              <Outlet />
             </main>
           </div>
         </div>
       </div>
       <MobileNav />
       <NewItemModal open={newOpen} onClose={() => setNewOpen(false)} />
+      <ShareModal />
     </div>
   );
-}
-
-export interface ShellContext {
-  query: string;
-  setQuery: (v: string) => void;
-  openNew: () => void;
 }
