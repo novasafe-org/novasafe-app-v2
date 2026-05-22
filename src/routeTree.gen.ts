@@ -9,38 +9,259 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppVaultRouteImport } from './routes/_app.vault'
+import { Route as AppSharedRouteImport } from './routes/_app.shared'
+import { Route as AppPasskeysRouteImport } from './routes/_app.passkeys'
+import { Route as AppOtpRouteImport } from './routes/_app.otp'
+import { Route as AppNotesRouteImport } from './routes/_app.notes'
+import { Route as AppFavoritesRouteImport } from './routes/_app.favorites'
+import { Route as AppDocumentsRouteImport } from './routes/_app.documents'
+import { Route as AppArchiveRouteImport } from './routes/_app.archive'
+import { Route as AppAccountRouteImport } from './routes/_app.account'
+import { Route as AppAccountIndexRouteImport } from './routes/_app.account.index'
+import { Route as AppAccountSecurityRouteImport } from './routes/_app.account.security'
+import { Route as AppAccountRecoveryRouteImport } from './routes/_app.account.recovery'
+import { Route as AppAccountProfileRouteImport } from './routes/_app.account.profile'
+import { Route as AppAccountDevicesRouteImport } from './routes/_app.account.devices'
+import { Route as AppAccountBillingRouteImport } from './routes/_app.account.billing'
+import { Route as AppAccountAppearanceRouteImport } from './routes/_app.account.appearance'
+import { Route as AppAccountActivityRouteImport } from './routes/_app.account.activity'
 
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppVaultRoute = AppVaultRouteImport.update({
+  id: '/vault',
+  path: '/vault',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSharedRoute = AppSharedRouteImport.update({
+  id: '/shared',
+  path: '/shared',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPasskeysRoute = AppPasskeysRouteImport.update({
+  id: '/passkeys',
+  path: '/passkeys',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOtpRoute = AppOtpRouteImport.update({
+  id: '/otp',
+  path: '/otp',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNotesRoute = AppNotesRouteImport.update({
+  id: '/notes',
+  path: '/notes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFavoritesRoute = AppFavoritesRouteImport.update({
+  id: '/favorites',
+  path: '/favorites',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDocumentsRoute = AppDocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppArchiveRoute = AppArchiveRouteImport.update({
+  id: '/archive',
+  path: '/archive',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAccountRoute = AppAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAccountIndexRoute = AppAccountIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppAccountRoute,
+} as any)
+const AppAccountSecurityRoute = AppAccountSecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => AppAccountRoute,
+} as any)
+const AppAccountRecoveryRoute = AppAccountRecoveryRouteImport.update({
+  id: '/recovery',
+  path: '/recovery',
+  getParentRoute: () => AppAccountRoute,
+} as any)
+const AppAccountProfileRoute = AppAccountProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AppAccountRoute,
+} as any)
+const AppAccountDevicesRoute = AppAccountDevicesRouteImport.update({
+  id: '/devices',
+  path: '/devices',
+  getParentRoute: () => AppAccountRoute,
+} as any)
+const AppAccountBillingRoute = AppAccountBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => AppAccountRoute,
+} as any)
+const AppAccountAppearanceRoute = AppAccountAppearanceRouteImport.update({
+  id: '/appearance',
+  path: '/appearance',
+  getParentRoute: () => AppAccountRoute,
+} as any)
+const AppAccountActivityRoute = AppAccountActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
+  getParentRoute: () => AppAccountRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AppAccountRouteWithChildren
+  '/archive': typeof AppArchiveRoute
+  '/documents': typeof AppDocumentsRoute
+  '/favorites': typeof AppFavoritesRoute
+  '/notes': typeof AppNotesRoute
+  '/otp': typeof AppOtpRoute
+  '/passkeys': typeof AppPasskeysRoute
+  '/shared': typeof AppSharedRoute
+  '/vault': typeof AppVaultRoute
+  '/account/activity': typeof AppAccountActivityRoute
+  '/account/appearance': typeof AppAccountAppearanceRoute
+  '/account/billing': typeof AppAccountBillingRoute
+  '/account/devices': typeof AppAccountDevicesRoute
+  '/account/profile': typeof AppAccountProfileRoute
+  '/account/recovery': typeof AppAccountRecoveryRoute
+  '/account/security': typeof AppAccountSecurityRoute
+  '/account/': typeof AppAccountIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/archive': typeof AppArchiveRoute
+  '/documents': typeof AppDocumentsRoute
+  '/favorites': typeof AppFavoritesRoute
+  '/notes': typeof AppNotesRoute
+  '/otp': typeof AppOtpRoute
+  '/passkeys': typeof AppPasskeysRoute
+  '/shared': typeof AppSharedRoute
+  '/vault': typeof AppVaultRoute
+  '/account/activity': typeof AppAccountActivityRoute
+  '/account/appearance': typeof AppAccountAppearanceRoute
+  '/account/billing': typeof AppAccountBillingRoute
+  '/account/devices': typeof AppAccountDevicesRoute
+  '/account/profile': typeof AppAccountProfileRoute
+  '/account/recovery': typeof AppAccountRecoveryRoute
+  '/account/security': typeof AppAccountSecurityRoute
+  '/account': typeof AppAccountIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/_app/account': typeof AppAccountRouteWithChildren
+  '/_app/archive': typeof AppArchiveRoute
+  '/_app/documents': typeof AppDocumentsRoute
+  '/_app/favorites': typeof AppFavoritesRoute
+  '/_app/notes': typeof AppNotesRoute
+  '/_app/otp': typeof AppOtpRoute
+  '/_app/passkeys': typeof AppPasskeysRoute
+  '/_app/shared': typeof AppSharedRoute
+  '/_app/vault': typeof AppVaultRoute
+  '/_app/account/activity': typeof AppAccountActivityRoute
+  '/_app/account/appearance': typeof AppAccountAppearanceRoute
+  '/_app/account/billing': typeof AppAccountBillingRoute
+  '/_app/account/devices': typeof AppAccountDevicesRoute
+  '/_app/account/profile': typeof AppAccountProfileRoute
+  '/_app/account/recovery': typeof AppAccountRecoveryRoute
+  '/_app/account/security': typeof AppAccountSecurityRoute
+  '/_app/account/': typeof AppAccountIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/account'
+    | '/archive'
+    | '/documents'
+    | '/favorites'
+    | '/notes'
+    | '/otp'
+    | '/passkeys'
+    | '/shared'
+    | '/vault'
+    | '/account/activity'
+    | '/account/appearance'
+    | '/account/billing'
+    | '/account/devices'
+    | '/account/profile'
+    | '/account/recovery'
+    | '/account/security'
+    | '/account/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/archive'
+    | '/documents'
+    | '/favorites'
+    | '/notes'
+    | '/otp'
+    | '/passkeys'
+    | '/shared'
+    | '/vault'
+    | '/account/activity'
+    | '/account/appearance'
+    | '/account/billing'
+    | '/account/devices'
+    | '/account/profile'
+    | '/account/recovery'
+    | '/account/security'
+    | '/account'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/_app/account'
+    | '/_app/archive'
+    | '/_app/documents'
+    | '/_app/favorites'
+    | '/_app/notes'
+    | '/_app/otp'
+    | '/_app/passkeys'
+    | '/_app/shared'
+    | '/_app/vault'
+    | '/_app/account/activity'
+    | '/_app/account/appearance'
+    | '/_app/account/billing'
+    | '/_app/account/devices'
+    | '/_app/account/profile'
+    | '/_app/account/recovery'
+    | '/_app/account/security'
+    | '/_app/account/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,12 +269,194 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/vault': {
+      id: '/_app/vault'
+      path: '/vault'
+      fullPath: '/vault'
+      preLoaderRoute: typeof AppVaultRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/shared': {
+      id: '/_app/shared'
+      path: '/shared'
+      fullPath: '/shared'
+      preLoaderRoute: typeof AppSharedRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/passkeys': {
+      id: '/_app/passkeys'
+      path: '/passkeys'
+      fullPath: '/passkeys'
+      preLoaderRoute: typeof AppPasskeysRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/otp': {
+      id: '/_app/otp'
+      path: '/otp'
+      fullPath: '/otp'
+      preLoaderRoute: typeof AppOtpRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/notes': {
+      id: '/_app/notes'
+      path: '/notes'
+      fullPath: '/notes'
+      preLoaderRoute: typeof AppNotesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/favorites': {
+      id: '/_app/favorites'
+      path: '/favorites'
+      fullPath: '/favorites'
+      preLoaderRoute: typeof AppFavoritesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/documents': {
+      id: '/_app/documents'
+      path: '/documents'
+      fullPath: '/documents'
+      preLoaderRoute: typeof AppDocumentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/archive': {
+      id: '/_app/archive'
+      path: '/archive'
+      fullPath: '/archive'
+      preLoaderRoute: typeof AppArchiveRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/account': {
+      id: '/_app/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AppAccountRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/account/': {
+      id: '/_app/account/'
+      path: '/'
+      fullPath: '/account/'
+      preLoaderRoute: typeof AppAccountIndexRouteImport
+      parentRoute: typeof AppAccountRoute
+    }
+    '/_app/account/security': {
+      id: '/_app/account/security'
+      path: '/security'
+      fullPath: '/account/security'
+      preLoaderRoute: typeof AppAccountSecurityRouteImport
+      parentRoute: typeof AppAccountRoute
+    }
+    '/_app/account/recovery': {
+      id: '/_app/account/recovery'
+      path: '/recovery'
+      fullPath: '/account/recovery'
+      preLoaderRoute: typeof AppAccountRecoveryRouteImport
+      parentRoute: typeof AppAccountRoute
+    }
+    '/_app/account/profile': {
+      id: '/_app/account/profile'
+      path: '/profile'
+      fullPath: '/account/profile'
+      preLoaderRoute: typeof AppAccountProfileRouteImport
+      parentRoute: typeof AppAccountRoute
+    }
+    '/_app/account/devices': {
+      id: '/_app/account/devices'
+      path: '/devices'
+      fullPath: '/account/devices'
+      preLoaderRoute: typeof AppAccountDevicesRouteImport
+      parentRoute: typeof AppAccountRoute
+    }
+    '/_app/account/billing': {
+      id: '/_app/account/billing'
+      path: '/billing'
+      fullPath: '/account/billing'
+      preLoaderRoute: typeof AppAccountBillingRouteImport
+      parentRoute: typeof AppAccountRoute
+    }
+    '/_app/account/appearance': {
+      id: '/_app/account/appearance'
+      path: '/appearance'
+      fullPath: '/account/appearance'
+      preLoaderRoute: typeof AppAccountAppearanceRouteImport
+      parentRoute: typeof AppAccountRoute
+    }
+    '/_app/account/activity': {
+      id: '/_app/account/activity'
+      path: '/activity'
+      fullPath: '/account/activity'
+      preLoaderRoute: typeof AppAccountActivityRouteImport
+      parentRoute: typeof AppAccountRoute
+    }
   }
 }
 
+interface AppAccountRouteChildren {
+  AppAccountActivityRoute: typeof AppAccountActivityRoute
+  AppAccountAppearanceRoute: typeof AppAccountAppearanceRoute
+  AppAccountBillingRoute: typeof AppAccountBillingRoute
+  AppAccountDevicesRoute: typeof AppAccountDevicesRoute
+  AppAccountProfileRoute: typeof AppAccountProfileRoute
+  AppAccountRecoveryRoute: typeof AppAccountRecoveryRoute
+  AppAccountSecurityRoute: typeof AppAccountSecurityRoute
+  AppAccountIndexRoute: typeof AppAccountIndexRoute
+}
+
+const AppAccountRouteChildren: AppAccountRouteChildren = {
+  AppAccountActivityRoute: AppAccountActivityRoute,
+  AppAccountAppearanceRoute: AppAccountAppearanceRoute,
+  AppAccountBillingRoute: AppAccountBillingRoute,
+  AppAccountDevicesRoute: AppAccountDevicesRoute,
+  AppAccountProfileRoute: AppAccountProfileRoute,
+  AppAccountRecoveryRoute: AppAccountRecoveryRoute,
+  AppAccountSecurityRoute: AppAccountSecurityRoute,
+  AppAccountIndexRoute: AppAccountIndexRoute,
+}
+
+const AppAccountRouteWithChildren = AppAccountRoute._addFileChildren(
+  AppAccountRouteChildren,
+)
+
+interface AppRouteChildren {
+  AppAccountRoute: typeof AppAccountRouteWithChildren
+  AppArchiveRoute: typeof AppArchiveRoute
+  AppDocumentsRoute: typeof AppDocumentsRoute
+  AppFavoritesRoute: typeof AppFavoritesRoute
+  AppNotesRoute: typeof AppNotesRoute
+  AppOtpRoute: typeof AppOtpRoute
+  AppPasskeysRoute: typeof AppPasskeysRoute
+  AppSharedRoute: typeof AppSharedRoute
+  AppVaultRoute: typeof AppVaultRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAccountRoute: AppAccountRouteWithChildren,
+  AppArchiveRoute: AppArchiveRoute,
+  AppDocumentsRoute: AppDocumentsRoute,
+  AppFavoritesRoute: AppFavoritesRoute,
+  AppNotesRoute: AppNotesRoute,
+  AppOtpRoute: AppOtpRoute,
+  AppPasskeysRoute: AppPasskeysRoute,
+  AppSharedRoute: AppSharedRoute,
+  AppVaultRoute: AppVaultRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
