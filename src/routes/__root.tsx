@@ -1,8 +1,14 @@
-import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  createRootRouteWithContext,
+  HeadContent,
+  Outlet,
+  Scripts,
+} from "@tanstack/react-router";
 import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -40,12 +46,7 @@ export const Route = createRootRoute({
       </body>
     </html>
   ),
-  component: () => (
-    <>
-      <Outlet />
-      <Toaster position="bottom-right" toastOptions={{ className: "!rounded-xl" }} />
-    </>
-  ),
+  component: RootComponent,
   notFoundComponent: () => (
     <div className="grid place-items-center min-h-screen text-center">
       <div>
@@ -55,3 +56,14 @@ export const Route = createRootRoute({
     </div>
   ),
 });
+
+function RootComponent() {
+  const { queryClient } = Route.useRouteContext();
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Outlet />
+      <Toaster position="bottom-right" toastOptions={{ className: "!rounded-xl" }} />
+    </QueryClientProvider>
+  );
+}
