@@ -24,7 +24,9 @@ export function AppShell() {
       }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        const el = document.querySelector<HTMLInputElement>('input[placeholder="Search your vault…"]');
+        const el = document.querySelector<HTMLInputElement>(
+          'input[placeholder="Search your vault…"]',
+        );
         el?.focus();
       }
     };

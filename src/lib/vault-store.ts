@@ -1,12 +1,27 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type {
-  VaultItem, ItemType, Passkey, OtpAccount, VaultDocument, ShareInvite,
-  Device, Session, ActivityEvent, Invoice,
+  VaultItem,
+  ItemType,
+  Passkey,
+  OtpAccount,
+  VaultDocument,
+  ShareInvite,
+  Device,
+  Session,
+  ActivityEvent,
+  Invoice,
 } from "./vault-types";
 import {
-  seedItems, seedPasskeys, seedOtp, seedDocs, seedInvites,
-  seedDevices, seedSessions, seedActivity, seedInvoices,
+  seedItems,
+  seedPasskeys,
+  seedOtp,
+  seedDocs,
+  seedInvites,
+  seedDevices,
+  seedSessions,
+  seedActivity,
+  seedInvoices,
 } from "./dummy-data";
 
 export type Theme = "light" | "dark";
@@ -98,9 +113,15 @@ export const useVault = create<State & Actions>()(
       createItem: (partial) => {
         const id = uid("itm");
         const item: VaultItem = {
-          id, tags: [], favorite: false, vault: "Personal",
-          createdAt: Date.now(), updatedAt: Date.now(), lastOpenedAt: Date.now(),
-          history: [], ...partial,
+          id,
+          tags: [],
+          favorite: false,
+          vault: "Personal",
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          lastOpenedAt: Date.now(),
+          history: [],
+          ...partial,
         };
         set((s) => ({ items: [item, ...s.items], selectedId: id }));
         get().logEvent("item", `Created ${item.title}`);
@@ -108,7 +129,9 @@ export const useVault = create<State & Actions>()(
       },
       updateItem: (id, patch) =>
         set((s) => ({
-          items: s.items.map((it) => (it.id === id ? { ...it, ...patch, updatedAt: Date.now() } : it)),
+          items: s.items.map((it) =>
+            it.id === id ? { ...it, ...patch, updatedAt: Date.now() } : it,
+          ),
         })),
       deleteItem: (id) => {
         const t = get().items.find((i) => i.id === id)?.title;
@@ -123,11 +146,19 @@ export const useVault = create<State & Actions>()(
       duplicateItem: (id) => {
         const it = get().items.find((i) => i.id === id);
         if (!it) return;
-        const copy: VaultItem = { ...it, id: uid("itm"), title: `${it.title} (copy)`, createdAt: Date.now(), updatedAt: Date.now() };
+        const copy: VaultItem = {
+          ...it,
+          id: uid("itm"),
+          title: `${it.title} (copy)`,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
         set((s) => ({ items: [copy, ...s.items], selectedId: copy.id }));
       },
       toggleFavorite: (id) =>
-        set((s) => ({ items: s.items.map((it) => (it.id === id ? { ...it, favorite: !it.favorite } : it)) })),
+        set((s) => ({
+          items: s.items.map((it) => (it.id === id ? { ...it, favorite: !it.favorite } : it)),
+        })),
       moveItem: (id, vault) => get().updateItem(id, { vault }),
       setTags: (id, tags) => get().updateItem(id, { tags }),
       changePassword: (id, password) => {
@@ -139,28 +170,46 @@ export const useVault = create<State & Actions>()(
         get().updateItem(id, { password, history });
       },
       touchOpened: (id) => get().updateItem(id, { lastOpenedAt: Date.now() }),
-      createVault: (name) => set((s) => (s.vaults.includes(name) ? s : { vaults: [...s.vaults, name] })),
+      createVault: (name) =>
+        set((s) => (s.vaults.includes(name) ? s : { vaults: [...s.vaults, name] })),
 
       addPasskey: (pk) =>
         set((s) => ({
-          passkeys: [{ ...pk, id: uid("pk"), createdAt: Date.now(), lastUsedAt: Date.now() }, ...s.passkeys],
+          passkeys: [
+            { ...pk, id: uid("pk"), createdAt: Date.now(), lastUsedAt: Date.now() },
+            ...s.passkeys,
+          ],
         })),
       revokePasskey: (id) => set((s) => ({ passkeys: s.passkeys.filter((p) => p.id !== id) })),
 
-      addOtp: (o) => set((s) => ({ otps: [{ ...o, id: uid("otp"), addedAt: Date.now() }, ...s.otps] })),
+      addOtp: (o) =>
+        set((s) => ({ otps: [{ ...o, id: uid("otp"), addedAt: Date.now() }, ...s.otps] })),
       removeOtp: (id) => set((s) => ({ otps: s.otps.filter((o) => o.id !== id) })),
       toggleOtpFav: (id) =>
-        set((s) => ({ otps: s.otps.map((o) => (o.id === id ? { ...o, favorite: !o.favorite } : o)) })),
+        set((s) => ({
+          otps: s.otps.map((o) => (o.id === id ? { ...o, favorite: !o.favorite } : o)),
+        })),
 
-      addDocument: (d) => set((s) => ({ documents: [{ ...d, id: uid("doc"), uploadedAt: Date.now() }, ...s.documents] })),
-      renameDocument: (id, name) => set((s) => ({ documents: s.documents.map((d) => (d.id === id ? { ...d, name } : d)) })),
+      addDocument: (d) =>
+        set((s) => ({
+          documents: [{ ...d, id: uid("doc"), uploadedAt: Date.now() }, ...s.documents],
+        })),
+      renameDocument: (id, name) =>
+        set((s) => ({ documents: s.documents.map((d) => (d.id === id ? { ...d, name } : d)) })),
       removeDocument: (id) => set((s) => ({ documents: s.documents.filter((d) => d.id !== id) })),
       shareDocument: (id, email) =>
-        set((s) => ({ documents: s.documents.map((d) => (d.id === id ? { ...d, shared: [...d.shared, email] } : d)) })),
+        set((s) => ({
+          documents: s.documents.map((d) =>
+            d.id === id ? { ...d, shared: [...d.shared, email] } : d,
+          ),
+        })),
 
       invite: (inv) =>
         set((s) => ({
-          invites: [{ ...inv, id: uid("sh"), createdAt: Date.now(), state: "pending" }, ...s.invites],
+          invites: [
+            { ...inv, id: uid("sh"), createdAt: Date.now(), state: "pending" },
+            ...s.invites,
+          ],
         })),
       setInviteState: (id, state) =>
         set((s) => ({ invites: s.invites.map((i) => (i.id === id ? { ...i, state } : i)) })),
@@ -172,23 +221,36 @@ export const useVault = create<State & Actions>()(
 
       setTheme: (t) => {
         set({ theme: t });
-        if (typeof document !== "undefined") document.documentElement.classList.toggle("dark", t === "dark");
+        if (typeof document !== "undefined")
+          document.documentElement.classList.toggle("dark", t === "dark");
       },
       setDensity: (d) => set({ density: d }),
       setNotifications: (v) => set({ notificationsEnabled: v }),
       setPlan: (p) => set({ plan: p }),
 
       logEvent: (kind, message) =>
-        set((s) => ({ activity: [{ id: uid("ev"), kind, message, at: Date.now() }, ...s.activity].slice(0, 50) })),
+        set((s) => ({
+          activity: [{ id: uid("ev"), kind, message, at: Date.now() }, ...s.activity].slice(0, 50),
+        })),
     }),
     {
       name: "novasafe-vault-v1",
       partialize: (s) => ({
-        items: s.items, vaults: s.vaults, passkeys: s.passkeys, otps: s.otps,
-        documents: s.documents, invites: s.invites, devices: s.devices,
-        sessions: s.sessions, activity: s.activity, invoices: s.invoices,
-        theme: s.theme, density: s.density, notificationsEnabled: s.notificationsEnabled, plan: s.plan,
+        items: s.items,
+        vaults: s.vaults,
+        passkeys: s.passkeys,
+        otps: s.otps,
+        documents: s.documents,
+        invites: s.invites,
+        devices: s.devices,
+        sessions: s.sessions,
+        activity: s.activity,
+        invoices: s.invoices,
+        theme: s.theme,
+        density: s.density,
+        notificationsEnabled: s.notificationsEnabled,
+        plan: s.plan,
       }),
-    }
-  )
+    },
+  ),
 );

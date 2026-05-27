@@ -1,5 +1,18 @@
 import { useMemo, useState } from "react";
-import { Star, Copy, Eye, EyeOff, ExternalLink, MoreHorizontal, Archive, Trash2, Share2, RefreshCw, Files, Globe } from "lucide-react";
+import {
+  Star,
+  Copy,
+  Eye,
+  EyeOff,
+  ExternalLink,
+  MoreHorizontal,
+  Archive,
+  Trash2,
+  Share2,
+  RefreshCw,
+  Files,
+  Globe,
+} from "lucide-react";
 import { useVault } from "@/lib/vault-store";
 import { useUI } from "@/lib/ui-store";
 import { TYPE_META } from "@/lib/item-meta";
@@ -11,12 +24,12 @@ import type { VaultItem } from "@/lib/vault-types";
 function timeAgo(ts: number) {
   const s = Math.floor((Date.now() - ts) / 1000);
   if (s < 60) return "just now";
-  if (s < 3600) return `${Math.floor(s/60)}m`;
-  if (s < 86400) return `${Math.floor(s/3600)}h`;
-  const d = Math.floor(s/86400);
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  const d = Math.floor(s / 86400);
   if (d < 30) return `${d}d`;
-  if (d < 365) return `${Math.floor(d/30)}mo`;
-  return `${Math.floor(d/365)}y`;
+  if (d < 365) return `${Math.floor(d / 30)}mo`;
+  return `${Math.floor(d / 365)}y`;
 }
 
 const copy = (v: string | undefined, label: string) => {
@@ -34,11 +47,12 @@ export function VaultPage({ filter }: { filter?: (it: VaultItem) => boolean }) {
     const base = items.filter((i) => (filter ? filter(i) : !i.archived));
     if (!query.trim()) return base;
     const q = query.toLowerCase();
-    return base.filter((i) =>
-      i.title.toLowerCase().includes(q) ||
-      i.username?.toLowerCase().includes(q) ||
-      i.domain?.toLowerCase().includes(q) ||
-      i.tags.some((t) => t.toLowerCase().includes(q))
+    return base.filter(
+      (i) =>
+        i.title.toLowerCase().includes(q) ||
+        i.username?.toLowerCase().includes(q) ||
+        i.domain?.toLowerCase().includes(q) ||
+        i.tags.some((t) => t.toLowerCase().includes(q)),
     );
   }, [items, query, filter]);
 
@@ -54,14 +68,24 @@ export function VaultPage({ filter }: { filter?: (it: VaultItem) => boolean }) {
   );
 }
 
-function ItemList({ items, selectedId, onSelect }: { items: VaultItem[]; selectedId: string | null; onSelect: (id: string) => void }) {
+function ItemList({
+  items,
+  selectedId,
+  onSelect,
+}: {
+  items: VaultItem[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
   const toggleFav = useVault((s) => s.toggleFavorite);
   return (
     <div className="w-full md:w-[360px] shrink-0 flex flex-col min-h-0">
       <div className="px-4 py-3 flex items-center justify-between">
         <div>
           <div className="text-sm font-semibold">All items</div>
-          <div className="text-xs text-ink-muted">{items.length} {items.length === 1 ? "item" : "items"}</div>
+          <div className="text-xs text-ink-muted">
+            {items.length} {items.length === 1 ? "item" : "items"}
+          </div>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto px-2 pb-3 no-scrollbar">
@@ -79,24 +103,44 @@ function ItemList({ items, selectedId, onSelect }: { items: VaultItem[]; selecte
                   onClick={() => onSelect(it.id)}
                   className={cn(
                     "w-full text-left flex items-center gap-3 px-2.5 py-2.5 rounded-xl transition relative",
-                    active ? "bg-accent" : "hover:bg-muted/70"
+                    active ? "bg-accent" : "hover:bg-muted/70",
                   )}
                 >
-                  {active && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r bg-brand" />}
-                  <span className={cn("size-9 rounded-lg grid place-items-center shrink-0", M.tint)}>
+                  {active && (
+                    <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r bg-brand" />
+                  )}
+                  <span
+                    className={cn("size-9 rounded-lg grid place-items-center shrink-0", M.tint)}
+                  >
                     <Icon className="size-4" />
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="flex items-center gap-1.5">
                       <span className="text-sm font-medium truncate">{it.title}</span>
-                      {it.breached && <span className="size-1.5 rounded-full bg-destructive" title="Breach detected" />}
+                      {it.breached && (
+                        <span
+                          className="size-1.5 rounded-full bg-destructive"
+                          title="Breach detected"
+                        />
+                      )}
                     </span>
-                    <span className="text-xs text-ink-muted truncate block">{it.username || it.domain || it.vault}</span>
+                    <span className="text-xs text-ink-muted truncate block">
+                      {it.username || it.domain || it.vault}
+                    </span>
                   </span>
                   <span className="flex items-center gap-2 text-[11px] text-ink-faint">
                     <span>{timeAgo(it.updatedAt)}</span>
-                    <button onClick={(e) => { e.stopPropagation(); toggleFav(it.id); }} className="hover:text-warning" aria-label="Favorite">
-                      <Star className={cn("size-3.5", it.favorite ? "fill-warning text-warning" : "")} />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFav(it.id);
+                      }}
+                      className="hover:text-warning"
+                      aria-label="Favorite"
+                    >
+                      <Star
+                        className={cn("size-3.5", it.favorite ? "fill-warning text-warning" : "")}
+                      />
                     </button>
                   </span>
                 </button>
@@ -148,13 +192,22 @@ function Inspector({ item }: { item: VaultItem }) {
               onChange={(e) => updateItem(item.id, { title: e.target.value })}
               className="text-xl font-semibold bg-transparent outline-none flex-1 min-w-0"
             />
-            <button onClick={() => toggleFav(item.id)} className="size-9 rounded-lg hover:bg-muted grid place-items-center">
+            <button
+              onClick={() => toggleFav(item.id)}
+              className="size-9 rounded-lg hover:bg-muted grid place-items-center"
+            >
               <Star className={cn("size-4", item.favorite && "fill-warning text-warning")} />
             </button>
-            <button onClick={() => openShare(item.title)} className="size-9 rounded-lg hover:bg-muted grid place-items-center" title="Share">
+            <button
+              onClick={() => openShare(item.title)}
+              className="size-9 rounded-lg hover:bg-muted grid place-items-center"
+              title="Share"
+            >
               <Share2 className="size-4" />
             </button>
-            <button className="size-9 rounded-lg hover:bg-muted grid place-items-center"><MoreHorizontal className="size-4" /></button>
+            <button className="size-9 rounded-lg hover:bg-muted grid place-items-center">
+              <MoreHorizontal className="size-4" />
+            </button>
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-ink-muted">
             <span className="px-2 py-0.5 rounded-md hairline">{M.label}</span>
@@ -163,7 +216,9 @@ function Inspector({ item }: { item: VaultItem }) {
             <span>·</span>
             <span>Updated {timeAgo(item.updatedAt)} ago</span>
             {item.tags.map((t) => (
-              <span key={t} className="px-2 py-0.5 rounded-md bg-accent text-brand-ink">#{t}</span>
+              <span key={t} className="px-2 py-0.5 rounded-md bg-accent text-brand-ink">
+                #{t}
+              </span>
             ))}
           </div>
         </div>
@@ -177,21 +232,32 @@ function Inspector({ item }: { item: VaultItem }) {
               onChange={(e) => updateItem(item.id, { username: e.target.value })}
               className="field"
             />
-            <ActionBtn onClick={() => copy(item.username, "Username")}><Copy className="size-3.5" /></ActionBtn>
+            <ActionBtn onClick={() => copy(item.username, "Username")}>
+              <Copy className="size-3.5" />
+            </ActionBtn>
           </Row>
         )}
 
         {item.password !== undefined && (
           <Row label="Password">
             <input
-              value={reveal ? item.password ?? "" : maskValue(item.password ?? "")}
+              value={reveal ? (item.password ?? "") : maskValue(item.password ?? "")}
               readOnly={!reveal}
               onChange={(e) => updateItem(item.id, { password: e.target.value })}
               className="field mono"
             />
-            <ActionBtn onClick={() => setReveal((v) => !v)}>{reveal ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}</ActionBtn>
-            <ActionBtn onClick={() => copy(item.password, "Password")}><Copy className="size-3.5" /></ActionBtn>
-            <ActionBtn onClick={() => { changePassword(item.id, generatePassword({ length: 20 })); toast.success("New password generated"); }}>
+            <ActionBtn onClick={() => setReveal((v) => !v)}>
+              {reveal ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+            </ActionBtn>
+            <ActionBtn onClick={() => copy(item.password, "Password")}>
+              <Copy className="size-3.5" />
+            </ActionBtn>
+            <ActionBtn
+              onClick={() => {
+                changePassword(item.id, generatePassword({ length: 20 }));
+                toast.success("New password generated");
+              }}
+            >
               <RefreshCw className="size-3.5" />
             </ActionBtn>
           </Row>
@@ -201,11 +267,28 @@ function Inspector({ item }: { item: VaultItem }) {
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs">
               <span className="text-ink-muted">Strength</span>
-              <span className={cn("font-medium", str.score >= 3 ? "text-success" : str.score === 2 ? "text-warning" : "text-destructive")}>{str.label}</span>
+              <span
+                className={cn(
+                  "font-medium",
+                  str.score >= 3
+                    ? "text-success"
+                    : str.score === 2
+                      ? "text-warning"
+                      : "text-destructive",
+                )}
+              >
+                {str.label}
+              </span>
             </div>
             <div className="flex gap-1">
-              {[0,1,2,3].map((i) => (
-                <span key={i} className={cn("h-1.5 flex-1 rounded-full", i < str.score ? "bg-brand" : "bg-muted")} />
+              {[0, 1, 2, 3].map((i) => (
+                <span
+                  key={i}
+                  className={cn(
+                    "h-1.5 flex-1 rounded-full",
+                    i < str.score ? "bg-brand" : "bg-muted",
+                  )}
+                />
               ))}
             </div>
           </div>
@@ -213,28 +296,57 @@ function Inspector({ item }: { item: VaultItem }) {
 
         {item.url && (
           <Row label="Website">
-            <input value={item.url} onChange={(e) => updateItem(item.id, { url: e.target.value })} className="field" />
-            <ActionBtn onClick={() => window.open(item.url, "_blank")}><ExternalLink className="size-3.5" /></ActionBtn>
+            <input
+              value={item.url}
+              onChange={(e) => updateItem(item.id, { url: e.target.value })}
+              className="field"
+            />
+            <ActionBtn onClick={() => window.open(item.url, "_blank")}>
+              <ExternalLink className="size-3.5" />
+            </ActionBtn>
           </Row>
         )}
 
         {item.type === "card" && (
           <>
-            <Row label="Card number"><input value={item.cardNumber ?? ""} readOnly className="field mono" /><ActionBtn onClick={() => copy(item.cardNumber, "Card")}><Copy className="size-3.5" /></ActionBtn></Row>
+            <Row label="Card number">
+              <input value={item.cardNumber ?? ""} readOnly className="field mono" />
+              <ActionBtn onClick={() => copy(item.cardNumber, "Card")}>
+                <Copy className="size-3.5" />
+              </ActionBtn>
+            </Row>
             <div className="grid grid-cols-3 gap-3">
-              <Field label="Holder"><input value={item.cardHolder ?? ""} readOnly className="field" /></Field>
-              <Field label="Expiry"><input value={item.cardExpiry ?? ""} readOnly className="field mono" /></Field>
-              <Field label="CVV"><input value={reveal ? item.cardCvv ?? "" : "•••"} readOnly className="field mono" /></Field>
+              <Field label="Holder">
+                <input value={item.cardHolder ?? ""} readOnly className="field" />
+              </Field>
+              <Field label="Expiry">
+                <input value={item.cardExpiry ?? ""} readOnly className="field mono" />
+              </Field>
+              <Field label="CVV">
+                <input
+                  value={reveal ? (item.cardCvv ?? "") : "•••"}
+                  readOnly
+                  className="field mono"
+                />
+              </Field>
             </div>
           </>
         )}
 
         {item.identity && (
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Full name"><input value={item.identity.fullName} readOnly className="field" /></Field>
-            <Field label="Number"><input value={item.identity.number} readOnly className="field mono" /></Field>
-            <Field label="Country"><input value={item.identity.country} readOnly className="field" /></Field>
-            <Field label="Expiry"><input value={item.identity.expiry ?? ""} readOnly className="field" /></Field>
+            <Field label="Full name">
+              <input value={item.identity.fullName} readOnly className="field" />
+            </Field>
+            <Field label="Number">
+              <input value={item.identity.number} readOnly className="field mono" />
+            </Field>
+            <Field label="Country">
+              <input value={item.identity.country} readOnly className="field" />
+            </Field>
+            <Field label="Expiry">
+              <input value={item.identity.expiry ?? ""} readOnly className="field" />
+            </Field>
           </div>
         )}
 
@@ -256,9 +368,21 @@ function Inspector({ item }: { item: VaultItem }) {
 
         <Section title="Security overview">
           <div className="grid grid-cols-3 gap-2 text-center">
-            <Stat label="Strength" value={str.label} tone={str.score >= 3 ? "good" : str.score === 2 ? "warn" : "bad"} />
-            <Stat label="Breach" value={item.breached ? "Detected" : "Clean"} tone={item.breached ? "bad" : "good"} />
-            <Stat label="2FA" value={item.otpSecret ? "Enabled" : "Off"} tone={item.otpSecret ? "good" : "warn"} />
+            <Stat
+              label="Strength"
+              value={str.label}
+              tone={str.score >= 3 ? "good" : str.score === 2 ? "warn" : "bad"}
+            />
+            <Stat
+              label="Breach"
+              value={item.breached ? "Detected" : "Clean"}
+              tone={item.breached ? "bad" : "good"}
+            />
+            <Stat
+              label="2FA"
+              value={item.otpSecret ? "Enabled" : "Off"}
+              tone={item.otpSecret ? "good" : "warn"}
+            />
           </div>
         </Section>
 
@@ -288,8 +412,23 @@ function Inspector({ item }: { item: VaultItem }) {
       <div className="px-6 py-3 border-t border-hairline flex items-center justify-between bg-surface/60">
         <div className="text-xs text-ink-faint">End-to-end encrypted</div>
         <div className="flex items-center gap-2">
-          <button onClick={() => archive(item.id)} className="h-9 px-3 rounded-lg hairline text-sm inline-flex items-center gap-1.5"><Archive className="size-3.5" />Archive</button>
-          <button onClick={() => { del(item.id); toast.success("Deleted"); }} className="h-9 px-3 rounded-lg text-sm inline-flex items-center gap-1.5 text-destructive hover:bg-destructive/10"><Trash2 className="size-3.5" />Delete</button>
+          <button
+            onClick={() => archive(item.id)}
+            className="h-9 px-3 rounded-lg hairline text-sm inline-flex items-center gap-1.5"
+          >
+            <Archive className="size-3.5" />
+            Archive
+          </button>
+          <button
+            onClick={() => {
+              del(item.id);
+              toast.success("Deleted");
+            }}
+            className="h-9 px-3 rounded-lg text-sm inline-flex items-center gap-1.5 text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 className="size-3.5" />
+            Delete
+          </button>
         </div>
       </div>
 
@@ -307,21 +446,44 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (<label className="block"><span className="block text-xs font-medium text-ink-muted mb-1.5">{label}</span>{children}</label>);
+  return (
+    <label className="block">
+      <span className="block text-xs font-medium text-ink-muted mb-1.5">{label}</span>
+      {children}
+    </label>
+  );
 }
 function ActionBtn({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) {
-  return <button onClick={onClick} className="size-9 rounded-lg hairline hover:bg-muted grid place-items-center shrink-0">{children}</button>;
+  return (
+    <button
+      onClick={onClick}
+      className="size-9 rounded-lg hairline hover:bg-muted grid place-items-center shrink-0"
+    >
+      {children}
+    </button>
+  );
 }
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-xl hairline bg-surface/60 p-4">
-      <div className="text-xs font-semibold uppercase tracking-wider text-ink-faint mb-3">{title}</div>
+      <div className="text-xs font-semibold uppercase tracking-wider text-ink-faint mb-3">
+        {title}
+      </div>
       {children}
     </div>
   );
 }
-function Stat({ label, value, tone }: { label: string; value: string; tone: "good" | "warn" | "bad" }) {
-  const c = tone === "good" ? "text-success" : tone === "warn" ? "text-warning" : "text-destructive";
+function Stat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: "good" | "warn" | "bad";
+}) {
+  const c =
+    tone === "good" ? "text-success" : tone === "warn" ? "text-warning" : "text-destructive";
   return (
     <div className="rounded-lg bg-muted/60 py-2.5">
       <div className={cn("text-sm font-semibold", c)}>{value}</div>
@@ -330,5 +492,10 @@ function Stat({ label, value, tone }: { label: string; value: string; tone: "goo
   );
 }
 function Meta({ k, v }: { k: string; v: string }) {
-  return <div className="flex items-center justify-between"><span className="text-ink-muted">{k}</span><span className="font-medium">{v}</span></div>;
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-ink-muted">{k}</span>
+      <span className="font-medium">{v}</span>
+    </div>
+  );
 }

@@ -3,12 +3,12 @@ import { User, Shield, Smartphone, Activity, KeyRound, CreditCard, Palette } fro
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { to: "/account/profile",    label: "Profile",    icon: User },
-  { to: "/account/security",   label: "Security",   icon: Shield },
-  { to: "/account/devices",    label: "Devices",    icon: Smartphone },
-  { to: "/account/activity",   label: "Activity",   icon: Activity },
-  { to: "/account/recovery",   label: "Recovery",   icon: KeyRound },
-  { to: "/account/billing",    label: "Billing",    icon: CreditCard },
+  { to: "/account/profile", label: "Profile", icon: User },
+  { to: "/account/security", label: "Security", icon: Shield },
+  { to: "/account/devices", label: "Devices", icon: Smartphone },
+  { to: "/account/activity", label: "Activity", icon: Activity },
+  { to: "/account/recovery", label: "Recovery", icon: KeyRound },
+  { to: "/account/billing", label: "Billing", icon: CreditCard },
   { to: "/account/appearance", label: "Appearance", icon: Palette },
 ] as const;
 
@@ -23,14 +23,26 @@ export function AccountLayout() {
             const Icon = n.icon;
             const active = path === n.to;
             return (
-              <Link key={n.to} to={n.to} className={cn("flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm", active ? "bg-accent text-brand-ink font-medium" : "text-ink-muted hover:bg-muted hover:text-ink")}>
-                <Icon className="size-4" />{n.label}
+              <Link
+                key={n.to}
+                to={n.to}
+                className={cn(
+                  "flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm",
+                  active
+                    ? "bg-accent text-brand-ink font-medium"
+                    : "text-ink-muted hover:bg-muted hover:text-ink",
+                )}
+              >
+                <Icon className="size-4" />
+                {n.label}
               </Link>
             );
           })}
         </nav>
       </aside>
-      <div className="flex-1 min-w-0 overflow-y-auto no-scrollbar"><Outlet /></div>
+      <div className="flex-1 min-w-0 overflow-y-auto no-scrollbar">
+        <Outlet />
+      </div>
     </div>
   );
 }

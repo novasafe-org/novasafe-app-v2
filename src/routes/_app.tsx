@@ -1,6 +1,41 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+
 import { AppShell } from "@/components/shell/AppShell";
+import { loadCurrentUserAction, setClientSession, type AuthUser } from "@/lib/auth";
 
-export const Route = createFileRoute("/_app")({ component: () => <AppShell /> });
+/**
+ * `_app` is the protected layout that hosts every authenticated screen.
+ *
+ * `beforeLoad` runs on both SSR and client navigation. The server-side
+ * implementation reads the HttpOnly session cookie, validates it against the
+ * backend, and either resolves the current user (passed into the route
+ * context) or throws a `redirect({ href })` to the auth project — preserving
+ * a `next=` round-trip so the user lands back where they tried to go.
+ */
+export const Route = createFileRoute("/_app")({
+  beforeLoad: async ({ location }) => {
+    const result = await loadCurrentUserAction({
+      data: { currentPath: location.href },
+    });
 
-void Outlet;
+    if (result.status !== "ok") {
+      throw redirect({ href: result.redirectTo, statusCode: 302 });
+    }
+
+    return { user: result.user };
+  },
+  component: AppLayout,
+});
+
+function AppLayout() {
+  const { user } = Route.useRouteContext();
+  useHydrateClientSession(user);
+  return <AppShell />;
+}
+
+function useHydrateClientSession(user: AuthUser): void {
+  useEffect(() => {
+    setClientSession({ user, pending: false });
+  }, [user]);
+}

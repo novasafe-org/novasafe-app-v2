@@ -1,0 +1,40 @@
+# Build artefacts — regenerated inside the image.
+dist
+.output
+.vite
+.tanstack
+.turbo
+
+# Local dev state.
+node_modules
+.pnpm-store
+
+# Source-control + editor noise.
+.git
+.gitignore
+.github
+.vscode
+.idea
+.cursor
+
+# Local-only env files.
+.env
+.env.*
+!.env.example
+
+# Logs / OS files.
+*.log
+.DS_Store
+Thumbs.db
+
+# Cloudflare Workers state.
+.wrangler
+
+# Tests / docs.
+coverage
+*.md
+!README.md
+
+# Build configs irrelevant to runtime image.
+Dockerfile*
+.dockerignore

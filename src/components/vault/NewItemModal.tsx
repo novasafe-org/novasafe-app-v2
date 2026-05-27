@@ -19,14 +19,21 @@ export function NewItemModal({ open, onClose }: { open: boolean; onClose: () => 
 
   useEffect(() => {
     if (open) {
-      setStep("pick"); setType("password");
-      setTitle(""); setUsername(""); setPassword(""); setUrl(""); setNotes("");
+      setStep("pick");
+      setType("password");
+      setTitle("");
+      setUsername("");
+      setPassword("");
+      setUrl("");
+      setNotes("");
     }
   }, [open]);
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
@@ -34,7 +41,10 @@ export function NewItemModal({ open, onClose }: { open: boolean; onClose: () => 
   if (!open) return null;
 
   const onCreate = () => {
-    if (!title.trim()) { toast.error("Give the item a name"); return; }
+    if (!title.trim()) {
+      toast.error("Give the item a name");
+      return;
+    }
     createItem({ type, title: title.trim(), username, password, url, notes });
     toast.success(`${TYPE_META[type].label} saved`);
     onClose();
@@ -46,10 +56,19 @@ export function NewItemModal({ open, onClose }: { open: boolean; onClose: () => 
       <div className="w-full max-w-2xl glass-strong rounded-2xl shadow-float overflow-hidden animate-scale-in">
         <div className="flex items-center justify-between px-5 py-3 border-b border-hairline">
           <div>
-            <div className="text-sm font-semibold">{step === "pick" ? "New item" : `New ${TYPE_META[type].label}`}</div>
-            <div className="text-xs text-ink-muted">{step === "pick" ? "Choose a category" : "Fill in the details"}</div>
+            <div className="text-sm font-semibold">
+              {step === "pick" ? "New item" : `New ${TYPE_META[type].label}`}
+            </div>
+            <div className="text-xs text-ink-muted">
+              {step === "pick" ? "Choose a category" : "Fill in the details"}
+            </div>
           </div>
-          <button onClick={onClose} className="size-8 rounded-lg hover:bg-muted grid place-items-center"><X className="size-4" /></button>
+          <button
+            onClick={onClose}
+            className="size-8 rounded-lg hover:bg-muted grid place-items-center"
+          >
+            <X className="size-4" />
+          </button>
         </div>
 
         {step === "pick" ? (
@@ -60,10 +79,15 @@ export function NewItemModal({ open, onClose }: { open: boolean; onClose: () => 
               return (
                 <button
                   key={t}
-                  onClick={() => { setType(t); setStep("form"); }}
+                  onClick={() => {
+                    setType(t);
+                    setStep("form");
+                  }}
                   className="group flex items-center gap-3 p-3 rounded-xl hairline hover:shadow-float hover:-translate-y-0.5 transition text-left bg-surface"
                 >
-                  <span className={`size-10 rounded-xl grid place-items-center ${M.tint}`}><Icon className="size-5" /></span>
+                  <span className={`size-10 rounded-xl grid place-items-center ${M.tint}`}>
+                    <Icon className="size-5" />
+                  </span>
                   <span className="text-sm font-medium">{M.label}</span>
                 </button>
               );
@@ -71,28 +95,80 @@ export function NewItemModal({ open, onClose }: { open: boolean; onClose: () => 
           </div>
         ) : (
           <div className="p-5 space-y-3">
-            <Field label="Name"><input autoFocus value={title} onChange={(e)=>setTitle(e.target.value)} placeholder="e.g. GitHub" className="input" /></Field>
-            {["password","apikey","wifi","server","ssh","license","database"].includes(type) && (
+            <Field label="Name">
+              <input
+                autoFocus
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. GitHub"
+                className="input"
+              />
+            </Field>
+            {["password", "apikey", "wifi", "server", "ssh", "license", "database"].includes(
+              type,
+            ) && (
               <>
-                <Field label="Username"><input value={username} onChange={(e)=>setUsername(e.target.value)} className="input" /></Field>
+                <Field label="Username">
+                  <input
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="input"
+                  />
+                </Field>
                 <Field label="Password / secret">
                   <div className="flex gap-2">
-                    <input value={password} onChange={(e)=>setPassword(e.target.value)} className="input flex-1 mono" />
-                    <button type="button" onClick={()=>setPassword(generatePassword({ length: 20 }))} className="h-10 px-3 rounded-lg bg-brand text-brand-foreground text-sm">Generate</button>
+                    <input
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="input flex-1 mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPassword(generatePassword({ length: 20 }))}
+                      className="h-10 px-3 rounded-lg bg-brand text-brand-foreground text-sm"
+                    >
+                      Generate
+                    </button>
                   </div>
                 </Field>
               </>
             )}
-            {["password","apikey","server","wifi"].includes(type) && (
-              <Field label="URL"><input value={url} onChange={(e)=>setUrl(e.target.value)} placeholder="https://" className="input" /></Field>
+            {["password", "apikey", "server", "wifi"].includes(type) && (
+              <Field label="URL">
+                <input
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://"
+                  className="input"
+                />
+              </Field>
             )}
-            <Field label="Notes"><textarea rows={3} value={notes} onChange={(e)=>setNotes(e.target.value)} className="input resize-none" /></Field>
+            <Field label="Notes">
+              <textarea
+                rows={3}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="input resize-none"
+              />
+            </Field>
 
             <div className="flex items-center justify-between pt-2">
-              <button onClick={()=>setStep("pick")} className="text-sm text-ink-muted hover:text-ink">← Change type</button>
+              <button
+                onClick={() => setStep("pick")}
+                className="text-sm text-ink-muted hover:text-ink"
+              >
+                ← Change type
+              </button>
               <div className="flex gap-2">
-                <button onClick={onClose} className="h-10 px-3 rounded-lg hairline text-sm">Cancel</button>
-                <button onClick={onCreate} className="h-10 px-4 rounded-lg bg-brand text-brand-foreground text-sm font-medium shadow-float">Save</button>
+                <button onClick={onClose} className="h-10 px-3 rounded-lg hairline text-sm">
+                  Cancel
+                </button>
+                <button
+                  onClick={onCreate}
+                  className="h-10 px-4 rounded-lg bg-brand text-brand-foreground text-sm font-medium shadow-float"
+                >
+                  Save
+                </button>
               </div>
             </div>
           </div>

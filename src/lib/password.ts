@@ -1,4 +1,6 @@
-export function generatePassword(opts: { length?: number; symbols?: boolean; numbers?: boolean; upper?: boolean } = {}) {
+export function generatePassword(
+  opts: { length?: number; symbols?: boolean; numbers?: boolean; upper?: boolean } = {},
+) {
   const { length = 20, symbols = true, numbers = true, upper = true } = opts;
   let alphabet = "abcdefghijklmnopqrstuvwxyz";
   if (upper) alphabet += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
