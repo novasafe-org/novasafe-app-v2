@@ -26,13 +26,32 @@ const viteEnv: EnvRecord =
 const procEnv: EnvRecord =
   typeof process !== "undefined" && process.env ? (process.env as EnvRecord) : {};
 
+const isServer = typeof window === "undefined";
+
+/**
+ * Read a single env value from Vite's build-time bundle and/or live process env.
+ *
+ * On the SSR server we prefer `process.env` first so docker-compose / `.env`
+ * overrides always win over values baked into `import.meta.env` at build time.
+ */
 export function readEnv(key: string, ...aliases: string[]): string | undefined {
-  for (const candidate of [key, ...aliases]) {
+  const candidates = [key, ...aliases];
+
+  for (const candidate of candidates) {
+    if (isServer) {
+      const fromProc = procEnv[candidate];
+      if (fromProc != null && fromProc !== "") return fromProc;
+    }
+
     const fromVite = viteEnv[candidate];
     if (fromVite != null && fromVite !== "") return fromVite;
-    const fromProc = procEnv[candidate];
-    if (fromProc != null && fromProc !== "") return fromProc;
+
+    if (!isServer) {
+      const fromProc = procEnv[candidate];
+      if (fromProc != null && fromProc !== "") return fromProc;
+    }
   }
+
   return undefined;
 }
 
@@ -44,6 +63,13 @@ const positiveInt = (fallback: number) =>
   });
 
 const url = z.string().url("must be a fully-qualified URL (http(s)://…)");
+
+const DEFAULT_PUBLIC_URLS = Object.freeze({
+  AUTH_URL: "https://start.novasafe.io",
+  LANDING_URL: "https://novasafe.io",
+  APP_URL: "https://app.novasafe.io",
+  API_URL: "https://api.novasafe.io",
+});
 
 const PublicEnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "staging", "production"]).default("development"),
@@ -58,10 +84,10 @@ const PublicEnvSchema = z.object({
 const rawPublic = {
   NODE_ENV: readEnv("NODE_ENV", "MODE"),
   PORT: readEnv("PORT", "VITE_PORT"),
-  AUTH_URL: readEnv("VITE_AUTH_URL"),
-  LANDING_URL: readEnv("VITE_LANDING_URL"),
-  APP_URL: readEnv("VITE_APP_URL"),
-  API_URL: readEnv("VITE_API_URL"),
+  AUTH_URL: readEnv("VITE_AUTH_URL", "AUTH_URL") ?? DEFAULT_PUBLIC_URLS.AUTH_URL,
+  LANDING_URL: readEnv("VITE_LANDING_URL", "LANDING_URL") ?? DEFAULT_PUBLIC_URLS.LANDING_URL,
+  APP_URL: readEnv("VITE_APP_URL", "APP_URL") ?? DEFAULT_PUBLIC_URLS.APP_URL,
+  API_URL: readEnv("VITE_API_URL", "API_URL") ?? DEFAULT_PUBLIC_URLS.API_URL,
   APP_VERSION: readEnv("VITE_APP_VERSION", "APP_VERSION"),
 };
 
