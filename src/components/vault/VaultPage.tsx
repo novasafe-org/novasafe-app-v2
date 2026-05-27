@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Star,
   Copy,
@@ -20,6 +20,15 @@ import { generatePassword, strength, maskValue } from "@/lib/password";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { VaultItem } from "@/lib/vault-types";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  listVaultItemsAction,
+  patchVaultItemAction,
+  deleteVaultItemAction,
+  toActionMessage,
+} from "@/lib/vault/server-actions";
+
+const VAULT_ITEMS_QUERY_KEY = ["vault", "items"] as const;
 
 function timeAgo(ts: number) {
   const s = Math.floor((Date.now() - ts) / 1000);
@@ -41,7 +50,45 @@ export function VaultPage({ filter }: { filter?: (it: VaultItem) => boolean }) {
   const items = useVault((s) => s.items);
   const selectedId = useVault((s) => s.selectedId);
   const setSelected = useVault((s) => s.setSelected);
+  const replaceItems = useVault((s) => s.replaceItems);
+  const upsertItem = useVault((s) => s.upsertItem);
+  const deleteLocalItem = useVault((s) => s.deleteItem);
+  const hydratedRef = useRef(false);
+  const queryClient = useQueryClient();
   const query = useUI((s) => s.query);
+
+  const itemsQuery = useQuery({
+    queryKey: VAULT_ITEMS_QUERY_KEY,
+    queryFn: () => listVaultItemsAction(),
+    staleTime: 15000,
+  });
+
+  const patchMutation = useMutation({
+    mutationFn: (data: { id: string; patch: Record<string, unknown> }) =>
+      patchVaultItemAction({ data: { id: data.id, ...data.patch } }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: VAULT_ITEMS_QUERY_KEY });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteVaultItemAction({ data: { id } }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: VAULT_ITEMS_QUERY_KEY });
+    },
+  });
+
+  useEffect(() => {
+    if (!itemsQuery.data?.items) return;
+    if (!hydratedRef.current) hydratedRef.current = true;
+    replaceItems(itemsQuery.data.items);
+  }, [itemsQuery.data, replaceItems]);
+
+  useEffect(() => {
+    if (!itemsQuery.error) return;
+    console.error("[VaultPage] failed loading items", itemsQuery.error);
+    toast.error("Could not load vault items from server.");
+  }, [itemsQuery.error]);
 
   const list = useMemo(() => {
     const base = items.filter((i) => (filter ? filter(i) : !i.archived));
@@ -60,9 +107,34 @@ export function VaultPage({ filter }: { filter?: (it: VaultItem) => boolean }) {
 
   return (
     <div className="h-full flex min-w-0">
-      <ItemList items={list} selectedId={selected?.id ?? null} onSelect={(id) => setSelected(id)} />
+      <ItemList
+        items={list}
+        selectedId={selected?.id ?? null}
+        onSelect={(id) => setSelected(id)}
+        onToggleFavorite={async (item) => {
+          const next = !item.favorite;
+          upsertItem({ ...item, favorite: next });
+          try {
+            const result = await patchMutation.mutateAsync({ id: item.id, patch: { favorite: next } });
+            upsertItem(result.item);
+          } catch (err) {
+            upsertItem(item);
+            toast.error(toActionMessage(err));
+          }
+        }}
+      />
       <div className="flex-1 min-w-0 border-l border-hairline bg-surface/40">
-        {selected ? <Inspector item={selected} /> : <EmptyInspector />}
+        {selected ? (
+          <Inspector
+            item={selected}
+            onUpsert={upsertItem}
+            onDelete={deleteLocalItem}
+            onPatch={async (id, patch) => patchMutation.mutateAsync({ id, patch })}
+            onDeleteRemote={async (id) => deleteMutation.mutateAsync(id)}
+          />
+        ) : (
+          <EmptyInspector />
+        )}
       </div>
     </div>
   );
@@ -76,8 +148,8 @@ function ItemList({
   items: VaultItem[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onToggleFavorite: (item: VaultItem) => void;
 }) {
-  const toggleFav = useVault((s) => s.toggleFavorite);
   return (
     <div className="w-full md:w-[360px] shrink-0 flex flex-col min-h-0">
       <div className="px-4 py-3 flex items-center justify-between">
@@ -133,7 +205,7 @@ function ItemList({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        toggleFav(it.id);
+                        onToggleFavorite(it);
                       }}
                       className="hover:text-warning"
                       aria-label="Favorite"
@@ -167,17 +239,34 @@ function EmptyInspector() {
   );
 }
 
-function Inspector({ item }: { item: VaultItem }) {
+function Inspector({
+  item,
+  onUpsert,
+  onDelete,
+  onPatch,
+  onDeleteRemote,
+}: {
+  item: VaultItem;
+  onUpsert: (item: VaultItem) => void;
+  onDelete: (id: string) => void;
+  onPatch: (id: string, patch: Record<string, unknown>) => Promise<{ item: VaultItem }>;
+  onDeleteRemote: (id: string) => Promise<{ status: "ok" }>;
+}) {
   const [reveal, setReveal] = useState(false);
   const updateItem = useVault((s) => s.updateItem);
-  const changePassword = useVault((s) => s.changePassword);
-  const toggleFav = useVault((s) => s.toggleFavorite);
-  const archive = useVault((s) => s.archiveItem);
-  const del = useVault((s) => s.deleteItem);
   const openShare = useUI((s) => s.openShare);
   const M = TYPE_META[item.type];
   const Icon = M.icon;
   const str = strength(item.password);
+
+  async function commitPatch(patch: Record<string, unknown>) {
+    try {
+      const result = await onPatch(item.id, patch);
+      onUpsert(result.item);
+    } catch (err) {
+      toast.error(toActionMessage(err));
+    }
+  }
 
   return (
     <div className="h-full flex flex-col min-h-0">
@@ -190,10 +279,15 @@ function Inspector({ item }: { item: VaultItem }) {
             <input
               value={item.title}
               onChange={(e) => updateItem(item.id, { title: e.target.value })}
+              onBlur={(e) => commitPatch({ title: e.target.value })}
               className="text-xl font-semibold bg-transparent outline-none flex-1 min-w-0"
             />
             <button
-              onClick={() => toggleFav(item.id)}
+              onClick={() => {
+                const next = !item.favorite;
+                onUpsert({ ...item, favorite: next });
+                commitPatch({ favorite: next });
+              }}
               className="size-9 rounded-lg hover:bg-muted grid place-items-center"
             >
               <Star className={cn("size-4", item.favorite && "fill-warning text-warning")} />
@@ -230,6 +324,7 @@ function Inspector({ item }: { item: VaultItem }) {
             <input
               value={item.username ?? ""}
               onChange={(e) => updateItem(item.id, { username: e.target.value })}
+              onBlur={(e) => commitPatch({ username: e.target.value })}
               className="field"
             />
             <ActionBtn onClick={() => copy(item.username, "Username")}>
@@ -244,6 +339,7 @@ function Inspector({ item }: { item: VaultItem }) {
               value={reveal ? (item.password ?? "") : maskValue(item.password ?? "")}
               readOnly={!reveal}
               onChange={(e) => updateItem(item.id, { password: e.target.value })}
+              onBlur={(e) => commitPatch({ password: e.target.value })}
               className="field mono"
             />
             <ActionBtn onClick={() => setReveal((v) => !v)}>
@@ -254,7 +350,9 @@ function Inspector({ item }: { item: VaultItem }) {
             </ActionBtn>
             <ActionBtn
               onClick={() => {
-                changePassword(item.id, generatePassword({ length: 20 }));
+                const generated = generatePassword({ length: 20 });
+                updateItem(item.id, { password: generated });
+                commitPatch({ password: generated });
                 toast.success("New password generated");
               }}
             >
@@ -299,6 +397,7 @@ function Inspector({ item }: { item: VaultItem }) {
             <input
               value={item.url}
               onChange={(e) => updateItem(item.id, { url: e.target.value })}
+              onBlur={(e) => commitPatch({ url: e.target.value })}
               className="field"
             />
             <ActionBtn onClick={() => window.open(item.url, "_blank")}>
@@ -354,6 +453,7 @@ function Inspector({ item }: { item: VaultItem }) {
           <textarea
             value={item.notes ?? ""}
             onChange={(e) => updateItem(item.id, { notes: e.target.value })}
+            onBlur={(e) => commitPatch({ notes: e.target.value })}
             rows={3}
             className="field resize-none py-2.5"
             placeholder="Add notes…"
@@ -413,7 +513,10 @@ function Inspector({ item }: { item: VaultItem }) {
         <div className="text-xs text-ink-faint">End-to-end encrypted</div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => archive(item.id)}
+            onClick={() => {
+              onUpsert({ ...item, archived: true });
+              commitPatch({ archived: true });
+            }}
             className="h-9 px-3 rounded-lg hairline text-sm inline-flex items-center gap-1.5"
           >
             <Archive className="size-3.5" />
@@ -421,8 +524,12 @@ function Inspector({ item }: { item: VaultItem }) {
           </button>
           <button
             onClick={() => {
-              del(item.id);
-              toast.success("Deleted");
+              onDeleteRemote(item.id)
+                .then(() => {
+                  onDelete(item.id);
+                  toast.success("Deleted");
+                })
+                .catch((err) => toast.error(toActionMessage(err)));
             }}
             className="h-9 px-3 rounded-lg text-sm inline-flex items-center gap-1.5 text-destructive hover:bg-destructive/10"
           >

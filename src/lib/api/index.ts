@@ -14,3 +14,12 @@ export type {
   PlanTier,
   SubscriptionLifecycleStatus,
 } from "./endpoints/subscriptions";
+
+export { vaultApi } from "./endpoints/vault";
+export type { VaultApi, CoreVaultItem } from "./endpoints/vault";
+
+export { settingsApi } from "./endpoints/settings";
+export type { SettingsApi, SessionDevice } from "./endpoints/settings";
+
+export { dashboardApi } from "./endpoints/dashboard";
+export type { DashboardApi, DashboardOverview, DashboardSecuritySummary } from "./endpoints/dashboard";

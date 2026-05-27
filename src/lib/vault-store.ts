@@ -46,6 +46,8 @@ interface State {
 }
 
 interface Actions {
+  replaceItems: (items: VaultItem[]) => void;
+  upsertItem: (item: VaultItem) => void;
   setSelected: (id: string | null) => void;
   createItem: (partial: Partial<VaultItem> & { type: ItemType; title: string }) => string;
   updateItem: (id: string, patch: Partial<VaultItem>) => void;
@@ -107,6 +109,20 @@ export const useVault = create<State & Actions>()(
       density: "comfortable",
       notificationsEnabled: true,
       plan: "Pro",
+
+      replaceItems: (items) =>
+        set((s) => ({
+          items,
+          selectedId: items.some((it) => it.id === s.selectedId) ? s.selectedId : (items[0]?.id ?? null),
+        })),
+      upsertItem: (item) =>
+        set((s) => {
+          const exists = s.items.some((it) => it.id === item.id);
+          if (!exists) return { items: [item, ...s.items], selectedId: item.id };
+          return {
+            items: s.items.map((it) => (it.id === item.id ? item : it)),
+          };
+        }),
 
       setSelected: (id) => set({ selectedId: id }),
 

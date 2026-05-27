@@ -1,14 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useVault } from "@/lib/vault-store";
 import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { loadMembershipAction } from "@/lib/account/server-actions";
 
 export const Route = createFileRoute("/_app/account/billing")({
   head: () => ({ meta: [{ title: "Billing — NovaSafe" }] }),
+  loader: async () => loadMembershipAction(),
   component: function Billing() {
-    const plan = useVault((s) => s.plan);
-    const setPlan = useVault((s) => s.setPlan);
-    const invoices = useVault((s) => s.invoices);
+    const { membership, state } = Route.useLoaderData();
+    const plan = state.isPro ? "Pro" : "Free";
+    const invoices = (membership.recentActivity || []).map((entry, index) => ({
+      id: `${entry.eventType}-${index}`,
+      number: entry.eventType.replaceAll("_", " "),
+      paidAt: entry.processedAt ? new Date(entry.processedAt).getTime() : Date.now(),
+      amount: 0,
+      status: entry.status === "processed" ? "paid" : "pending",
+    }));
     return (
       <div className="p-6 max-w-3xl space-y-4">
         <h1 className="text-xl font-semibold">Billing</h1>
@@ -21,21 +28,16 @@ export const Route = createFileRoute("/_app/account/billing")({
             </div>
             <div className="mt-3 text-3xl font-semibold">{plan}</div>
             <div className="text-sm opacity-80 mt-1">
-              Unlimited items · Encrypted sharing · Priority sync
+              {state.subscriptionStatus} {state.renewsAt ? `· Renews ${new Date(state.renewsAt).toLocaleDateString()}` : ""}
             </div>
-            <div className="mt-5 flex gap-2">
-              {(["Free", "Pro", "Family"] as const).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => {
-                    setPlan(p);
-                    toast.success(`Switched to ${p}`);
-                  }}
-                  className={`h-9 px-3 rounded-lg text-sm ${plan === p ? "bg-white text-brand-ink" : "bg-white/15 hover:bg-white/25"}`}
-                >
-                  {p}
-                </button>
-              ))}
+            <div className="mt-5 flex gap-2 items-center">
+              <button
+                onClick={() => toast.info("Manage billing from the onboarding billing flow.")}
+                className="h-9 px-3 rounded-lg text-sm bg-white text-brand-ink"
+              >
+                Manage plan
+              </button>
+              <span className="text-xs opacity-80">Provider: {state.subscriptionProvider}</span>
             </div>
           </div>
         </div>
@@ -43,13 +45,20 @@ export const Route = createFileRoute("/_app/account/billing")({
           <div className="px-4 py-3 text-sm font-medium border-b border-hairline">Invoices</div>
           <table className="w-full text-sm">
             <tbody>
+              {invoices.length === 0 && (
+                <tr>
+                  <td className="p-3 text-ink-muted text-sm" colSpan={5}>
+                    No billing activity yet.
+                  </td>
+                </tr>
+              )}
               {invoices.map((inv) => (
                 <tr key={inv.id} className="border-t border-hairline first:border-t-0">
                   <td className="p-3 font-medium">{inv.number}</td>
                   <td className="p-3 text-ink-muted">
                     {new Date(inv.paidAt).toLocaleDateString()}
                   </td>
-                  <td className="p-3 mono">${inv.amount.toFixed(2)}</td>
+                  <td className="p-3 mono">{inv.amount ? `$${inv.amount.toFixed(2)}` : "-"}</td>
                   <td className="p-3">
                     <span className="text-xs px-2 py-0.5 rounded-md bg-success/15 text-success capitalize">
                       {inv.status}

@@ -5,10 +5,15 @@ import { useVault } from "@/lib/vault-store";
 import { generatePassword } from "@/lib/password";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { createVaultItemAction, toActionMessage } from "@/lib/vault/server-actions";
+import { useQueryClient } from "@tanstack/react-query";
+
+const VAULT_ITEMS_QUERY_KEY = ["vault", "items"] as const;
 
 export function NewItemModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const createItem = useVault((s) => s.createItem);
+  const upsertItem = useVault((s) => s.upsertItem);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<"pick" | "form">("pick");
   const [type, setType] = useState<keyof typeof TYPE_META>("password");
   const [title, setTitle] = useState("");
@@ -40,15 +45,30 @@ export function NewItemModal({ open, onClose }: { open: boolean; onClose: () => 
 
   if (!open) return null;
 
-  const onCreate = () => {
+  const onCreate = async () => {
     if (!title.trim()) {
       toast.error("Give the item a name");
       return;
     }
-    createItem({ type, title: title.trim(), username, password, url, notes });
-    toast.success(`${TYPE_META[type].label} saved`);
-    onClose();
-    navigate({ to: "/vault" });
+    try {
+      const result = await createVaultItemAction({
+        data: {
+          type,
+          title: title.trim(),
+          username,
+          password,
+          url,
+          notes,
+        },
+      });
+      upsertItem(result.item);
+      void queryClient.invalidateQueries({ queryKey: VAULT_ITEMS_QUERY_KEY });
+      toast.success(`${TYPE_META[type].label} saved`);
+      onClose();
+      navigate({ to: "/vault" });
+    } catch (err) {
+      toast.error(toActionMessage(err));
+    }
   };
 
   return (
