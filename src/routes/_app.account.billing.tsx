@@ -5,6 +5,7 @@ import { loadMembershipAction } from "@/lib/account/server-actions";
 
 export const Route = createFileRoute("/_app/account/billing")({
   head: () => ({ meta: [{ title: "Billing — NovaSafe" }] }),
+  staleTime: 60_000,
   loader: async () => loadMembershipAction(),
   component: function Billing() {
     const { membership, state } = Route.useLoaderData();

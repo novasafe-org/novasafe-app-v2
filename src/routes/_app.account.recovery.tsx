@@ -6,6 +6,7 @@ import { logoutAction } from "@/lib/auth/server-actions";
 
 export const Route = createFileRoute("/_app/account/recovery")({
   head: () => ({ meta: [{ title: "Recovery — NovaSafe" }] }),
+  staleTime: 60_000,
   loader: async () => loadRecoveryAction(),
   component: function Recovery() {
     const { summary, history } = Route.useLoaderData();

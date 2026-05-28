@@ -9,6 +9,7 @@ import {
 
 export const Route = createFileRoute("/_app/account/devices")({
   head: () => ({ meta: [{ title: "Devices — NovaSafe" }] }),
+  staleTime: 60_000,
   loader: async () => loadDevicesAction(),
   component: function Devices() {
     const initial = Route.useLoaderData();

@@ -9,6 +9,7 @@ import {
   subscribeToClientSession,
   type ClientSession,
 } from "@/lib/auth";
+import { clearAuthGateCache } from "@/lib/auth/session-gate";
 import { buildLoginUrl } from "@/config";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +50,7 @@ export function UserMenu() {
     } catch (err) {
       console.error("[UserMenu] logout failed", err);
     } finally {
+      clearAuthGateCache();
       clearClientSession();
       window.location.assign(buildLoginUrl());
     }

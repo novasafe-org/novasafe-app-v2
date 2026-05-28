@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
 import { AppShell } from "@/components/shell/AppShell";
-import { loadCurrentUserAction, setClientSession, type AuthUser } from "@/lib/auth";
+import { setClientSession, type AuthUser } from "@/lib/auth";
+import { ensureAuthenticatedUser } from "@/lib/auth/session-gate";
 
 /**
  * `_app` is the protected layout that hosts every authenticated screen.
@@ -13,11 +14,12 @@ import { loadCurrentUserAction, setClientSession, type AuthUser } from "@/lib/au
  * context) or throws a `redirect({ href })` to the auth project — preserving
  * a `next=` round-trip so the user lands back where they tried to go.
  */
+/** Authenticated shell — client-rendered after first load for snappy in-app navigation. */
 export const Route = createFileRoute("/_app")({
+  ssr: false,
+  staleTime: 5 * 60 * 1000,
   beforeLoad: async ({ location }) => {
-    const result = await loadCurrentUserAction({
-      data: { currentPath: location.href },
-    });
+    const result = await ensureAuthenticatedUser(location.href);
 
     if (result.status !== "ok") {
       throw redirect({ href: result.redirectTo, statusCode: 302 });

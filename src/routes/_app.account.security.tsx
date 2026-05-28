@@ -10,6 +10,7 @@ import {
 } from "@/lib/account/server-actions";
 export const Route = createFileRoute("/_app/account/security")({
   head: () => ({ meta: [{ title: "Security — NovaSafe" }] }),
+  staleTime: 60_000,
   loader: async () => loadSecurityAction(),
   component: function SecurityRoute() {
     const { security, settings } = Route.useLoaderData();

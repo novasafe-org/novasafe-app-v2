@@ -6,6 +6,7 @@ const ICONS = { security: Shield, login: LogIn, item: Files, share: Share2 } as 
 
 export const Route = createFileRoute("/_app/account/activity")({
   head: () => ({ meta: [{ title: "Activity — NovaSafe" }] }),
+  staleTime: 60_000,
   loader: async () => loadActivityAction(),
   component: function Activity() {
     const { activity } = Route.useLoaderData();

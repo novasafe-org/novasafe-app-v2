@@ -4,6 +4,7 @@ import { loadAccountSettingsAction } from "@/lib/account/server-actions";
 const appRoute = getRouteApi("/_app");
 export const Route = createFileRoute("/_app/account/profile")({
   head: () => ({ meta: [{ title: "Profile — NovaSafe" }] }),
+  staleTime: 60_000,
   loader: async () => loadAccountSettingsAction(),
   component: function ProfilePage() {
     const { user } = appRoute.useRouteContext();

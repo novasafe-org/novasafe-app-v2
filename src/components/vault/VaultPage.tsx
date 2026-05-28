@@ -60,7 +60,8 @@ export function VaultPage({ filter }: { filter?: (it: VaultItem) => boolean }) {
   const itemsQuery = useQuery({
     queryKey: VAULT_ITEMS_QUERY_KEY,
     queryFn: () => listVaultItemsAction(),
-    staleTime: 15000,
+    staleTime: 60_000,
+    placeholderData: (prev) => prev,
   });
 
   const patchMutation = useMutation({

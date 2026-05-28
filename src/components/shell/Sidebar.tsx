@@ -20,13 +20,15 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/vault", label: "Vault", icon: Shield },
-  { to: "/passkeys", label: "Passkeys", icon: KeyRound },
-  { to: "/otp", label: "Authenticator", icon: ShieldCheck },
-  { to: "/notes", label: "Secure Notes", icon: FileText },
-  { to: "/documents", label: "Documents", icon: Files },
-  { to: "/shared", label: "Shared", icon: Share2 },
   { to: "/favorites", label: "Favorites", icon: Star },
   { to: "/archive", label: "Archive", icon: Archive },
+
+  // TODO: Add these back in when we have the features
+  // { to: "/passkeys", label: "Passkeys", icon: KeyRound },
+  // { to: "/otp", label: "Authenticator", icon: ShieldCheck },
+  // { to: "/notes", label: "Secure Notes", icon: FileText },
+  // { to: "/documents", label: "Documents", icon: Files },
+  // { to: "/shared", label: "Shared", icon: Share2 },
 ] as const;
 
 export function Sidebar({ onNew }: { onNew?: () => void }) {
