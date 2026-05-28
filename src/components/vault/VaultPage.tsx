@@ -338,7 +338,7 @@ function Inspector({
 
   return (
     <div className="h-full min-h-0 flex flex-col">
-      <div className="shrink-0 px-4 md:px-6 lg:px-[10%] xl:px-[18%] pt-6 pb-4 flex items-start gap-4 border-b border-hairline">
+      <div className="shrink-0 px-4 md:px-6 pt-6 pb-4 flex items-start gap-4 border-b border-hairline">
         <div className={cn("size-14 rounded-2xl grid place-items-center shrink-0", M.tint)}>
           <Icon className="size-6" />
         </div>
@@ -405,7 +405,7 @@ function Inspector({
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
-        <div className="mx-auto w-full max-w-2xl px-4 md:px-6 lg:px-8 xl:px-0 py-6 space-y-5 lg:max-w-xl xl:max-w-2xl">
+        <div className="mx-auto w-full px-4 md:px-6 py-6 space-y-5 lg:px-[12%] xl:px-[18%] 2xl:px-[22%]">
           {item.username !== undefined &&
             (editing ? (
               <Row label="Username">
@@ -590,7 +590,7 @@ function Inspector({
         </div>
       </div>
 
-      <div className="shrink-0 px-4 md:px-6 lg:px-[10%] xl:px-[18%] py-3 border-t border-hairline flex items-center justify-between bg-surface/60">
+      <div className="shrink-0 px-4 md:px-6 py-3 border-t border-hairline flex items-center justify-between bg-surface/60">
         <div className="text-xs text-ink-faint">End-to-end encrypted</div>
         <div className="flex items-center gap-2">
           <button
@@ -672,11 +672,15 @@ function ViewField({
           mutedEmpty && !value.trim() && "text-ink-faint",
         )}
       >
-        <span className={cn("flex-1 text-sm truncate", mono && "mono", secret && "mono")}>
+        <span className={cn("flex-1 min-w-0 text-sm truncate", mono && "mono", secret && "mono")}>
           {display}
         </span>
-        {hover && (
-          <span className="flex items-center gap-0.5 shrink-0 text-ink-muted">
+        <span
+          className={cn(
+            "flex items-center gap-0.5 shrink-0 text-ink-muted w-[68px] justify-end transition-opacity",
+            hover ? "opacity-100" : "opacity-0",
+          )}
+        >
             {secret && onToggleReveal && (
               <span
                 role="button"
@@ -701,8 +705,7 @@ function ViewField({
             <span className="size-8 rounded-lg hover:bg-surface/80 grid place-items-center">
               <Copy className="size-3.5" />
             </span>
-          </span>
-        )}
+        </span>
       </button>
     </div>
   );
