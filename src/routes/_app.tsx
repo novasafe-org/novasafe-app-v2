@@ -4,6 +4,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/components/shell/AppShell";
 import { setClientSession, type AuthUser } from "@/lib/auth";
 import { ensureAuthenticatedUser } from "@/lib/auth/session-gate";
+import { syncVaultScopeForUser } from "@/lib/vault-store";
 
 /**
  * `_app` is the protected layout that hosts every authenticated screen.
@@ -38,6 +39,7 @@ function AppLayout() {
 
 function useHydrateClientSession(user: AuthUser): void {
   useEffect(() => {
+    syncVaultScopeForUser(user.id);
     setClientSession({ user, pending: false });
   }, [user]);
 }

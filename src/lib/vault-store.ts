@@ -13,7 +13,6 @@ import type {
   Invoice,
 } from "./vault-types";
 import {
-  seedItems,
   seedPasskeys,
   seedOtp,
   seedDocs,
@@ -90,11 +89,13 @@ interface Actions {
 }
 
 const uid = (p: string) => `${p}_${Math.random().toString(36).slice(2, 9)}`;
+const PERSIST_KEY = "novasafe-vault-v1";
+const LAST_USER_KEY = "ns_last_user_id";
 
 export const useVault = create<State & Actions>()(
   persist(
     (set, get) => ({
-      items: seedItems,
+      items: [],
       vaults: ["Personal", "Work", "Family"],
       passkeys: seedPasskeys,
       otps: seedOtp,
@@ -104,7 +105,7 @@ export const useVault = create<State & Actions>()(
       sessions: seedSessions,
       activity: seedActivity,
       invoices: seedInvoices,
-      selectedId: seedItems[0]?.id ?? null,
+      selectedId: null,
       theme: "light",
       density: "comfortable",
       notificationsEnabled: true,
@@ -270,3 +271,44 @@ export const useVault = create<State & Actions>()(
     },
   ),
 );
+
+/**
+ * Clear account-scoped vault data so user A's cached records never flash for user B.
+ */
+export function clearVaultSessionData(): void {
+  const current = useVault.getState();
+  useVault.setState({
+    items: [],
+    selectedId: null,
+    passkeys: [],
+    otps: [],
+    documents: [],
+    invites: [],
+    devices: [],
+    sessions: [],
+    activity: [],
+    invoices: [],
+    vaults: ["Personal", "Work", "Family"],
+    plan: "Free",
+    theme: current.theme,
+    density: current.density,
+    notificationsEnabled: current.notificationsEnabled,
+  });
+
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(PERSIST_KEY);
+    window.localStorage.removeItem(LAST_USER_KEY);
+  }
+}
+
+/**
+ * Ensure persisted vault data is bound to the currently authenticated user.
+ */
+export function syncVaultScopeForUser(userId: string): void {
+  if (typeof window === "undefined") return;
+  const previous = window.localStorage.getItem(LAST_USER_KEY);
+  if (previous && previous !== userId) {
+    clearVaultSessionData();
+  }
+  window.localStorage.setItem(LAST_USER_KEY, userId);
+}

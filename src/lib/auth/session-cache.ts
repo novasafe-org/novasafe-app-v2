@@ -1,5 +1,6 @@
 import type { AuthUser } from "@/lib/api";
 import { runtime } from "@/config";
+import { clearWebSessionStarted, markWebSessionStarted } from "@/lib/auth/session-lifetime";
 
 /**
  * In-memory session cache, mirrored across the same tab.
@@ -31,6 +32,14 @@ function notify(): void {
 
 export function setClientSession(session: ClientSession | null): void {
   memorySession = session ? { ...session } : null;
+  if (runtime.isBrowser) {
+    if (session) {
+      const raw = window.localStorage.getItem("ns_session_started_at");
+      if (!raw) markWebSessionStarted();
+    } else {
+      clearWebSessionStarted();
+    }
+  }
   notify();
 }
 
@@ -41,6 +50,7 @@ export function getClientSession(): ClientSession | null {
 export function clearClientSession(): void {
   if (memorySession === null) return;
   memorySession = null;
+  if (runtime.isBrowser) clearWebSessionStarted();
   notify();
 }
 

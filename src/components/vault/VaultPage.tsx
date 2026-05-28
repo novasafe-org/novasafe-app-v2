@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Files,
   Globe,
+  Pencil,
 } from "lucide-react";
 import { useVault } from "@/lib/vault-store";
 import { useUI } from "@/lib/ui-store";
@@ -61,7 +62,6 @@ export function VaultPage({ filter }: { filter?: (it: VaultItem) => boolean }) {
     queryKey: VAULT_ITEMS_QUERY_KEY,
     queryFn: () => listVaultItemsAction(),
     staleTime: 60_000,
-    placeholderData: (prev) => prev,
   });
 
   const patchMutation = useMutation({
@@ -105,9 +105,14 @@ export function VaultPage({ filter }: { filter?: (it: VaultItem) => boolean }) {
   }, [items, query, filter]);
 
   const selected = list.find((i) => i.id === selectedId) ?? list[0] ?? null;
+  const loadingInitialData = !itemsQuery.data && itemsQuery.isFetching;
+
+  if (loadingInitialData) {
+    return <VaultLoadingSkeleton />;
+  }
 
   return (
-    <div className="h-full flex min-w-0">
+    <div className="h-full min-h-0 flex min-w-0">
       <ItemList
         items={list}
         selectedId={selected?.id ?? null}
@@ -124,7 +129,7 @@ export function VaultPage({ filter }: { filter?: (it: VaultItem) => boolean }) {
           }
         }}
       />
-      <div className="flex-1 min-w-0 border-l border-hairline bg-surface/40">
+      <div className="flex-1 min-w-0 min-h-0 border-l border-hairline bg-surface/40 flex flex-col">
         {selected ? (
           <Inspector
             item={selected}
@@ -141,10 +146,66 @@ export function VaultPage({ filter }: { filter?: (it: VaultItem) => boolean }) {
   );
 }
 
+function VaultLoadingSkeleton() {
+  return (
+    <div className="h-full min-h-0 flex min-w-0 animate-pulse">
+      <div className="w-full md:w-[360px] shrink-0 flex flex-col min-h-0">
+        <div className="px-4 py-3">
+          <div className="h-4 w-20 rounded bg-muted/70" />
+          <div className="h-3 w-14 rounded bg-muted/60 mt-2" />
+        </div>
+        <div className="flex-1 overflow-y-auto px-2 pb-3 space-y-2">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-hairline p-3 bg-surface/70">
+              <div className="flex items-center gap-3">
+                <div className="size-9 rounded-lg bg-muted/70 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="h-3.5 w-2/3 rounded bg-muted/70" />
+                  <div className="h-3 w-1/2 rounded bg-muted/60 mt-2" />
+                </div>
+                <div className="h-3 w-8 rounded bg-muted/60" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="flex-1 min-w-0 min-h-0 border-l border-hairline bg-surface/40 flex flex-col">
+        <div className="shrink-0 px-4 md:px-6 lg:px-[10%] xl:px-[18%] pt-6 pb-4 border-b border-hairline">
+          <div className="flex items-start gap-4">
+            <div className="size-14 rounded-2xl bg-muted/70 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="h-6 w-48 rounded bg-muted/70" />
+              <div className="h-3.5 w-64 rounded bg-muted/60 mt-3" />
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="mx-auto w-full max-w-2xl px-4 md:px-6 lg:px-8 xl:px-0 py-6 space-y-4 lg:max-w-xl xl:max-w-2xl">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={i}>
+                <div className="h-3 w-24 rounded bg-muted/60 mb-2" />
+                <div className="h-10 rounded-xl bg-muted/70" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="shrink-0 px-4 md:px-6 lg:px-[10%] xl:px-[18%] py-3 border-t border-hairline flex justify-between">
+          <div className="h-3.5 w-28 rounded bg-muted/60" />
+          <div className="flex gap-2">
+            <div className="h-9 w-20 rounded-lg bg-muted/70" />
+            <div className="h-9 w-20 rounded-lg bg-muted/70" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ItemList({
   items,
   selectedId,
   onSelect,
+  onToggleFavorite,
 }: {
   items: VaultItem[];
   selectedId: string | null;
@@ -253,12 +314,18 @@ function Inspector({
   onPatch: (id: string, patch: Record<string, unknown>) => Promise<{ item: VaultItem }>;
   onDeleteRemote: (id: string) => Promise<{ status: "ok" }>;
 }) {
-  const [reveal, setReveal] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [revealPassword, setRevealPassword] = useState(false);
   const updateItem = useVault((s) => s.updateItem);
   const openShare = useUI((s) => s.openShare);
   const M = TYPE_META[item.type];
   const Icon = M.icon;
   const str = strength(item.password);
+
+  useEffect(() => {
+    setEditing(false);
+    setRevealPassword(false);
+  }, [item.id]);
 
   async function commitPatch(patch: Record<string, unknown>) {
     try {
@@ -270,20 +337,37 @@ function Inspector({
   }
 
   return (
-    <div className="h-full flex flex-col min-h-0">
-      <div className="px-6 pt-6 pb-4 flex items-start gap-4 border-b border-hairline">
-        <div className={cn("size-14 rounded-2xl grid place-items-center", M.tint)}>
+    <div className="h-full min-h-0 flex flex-col">
+      <div className="shrink-0 px-4 md:px-6 lg:px-[10%] xl:px-[18%] pt-6 pb-4 flex items-start gap-4 border-b border-hairline">
+        <div className={cn("size-14 rounded-2xl grid place-items-center shrink-0", M.tint)}>
           <Icon className="size-6" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <input
-              value={item.title}
-              onChange={(e) => updateItem(item.id, { title: e.target.value })}
-              onBlur={(e) => commitPatch({ title: e.target.value })}
-              className="text-xl font-semibold bg-transparent outline-none flex-1 min-w-0"
-            />
+            {editing ? (
+              <input
+                value={item.title}
+                onChange={(e) => updateItem(item.id, { title: e.target.value })}
+                onBlur={(e) => commitPatch({ title: e.target.value })}
+                className="text-xl font-semibold bg-transparent outline-none flex-1 min-w-0 field border-0 shadow-none px-0 h-auto"
+              />
+            ) : (
+              <h1 className="text-xl font-semibold flex-1 min-w-0 truncate">{item.title}</h1>
+            )}
             <button
+              type="button"
+              onClick={() => setEditing((v) => !v)}
+              className={cn(
+                "size-9 rounded-lg grid place-items-center transition",
+                editing ? "bg-accent text-brand-ink" : "hover:bg-muted",
+              )}
+              title={editing ? "Done editing" : "Edit item"}
+              aria-pressed={editing}
+            >
+              <Pencil className="size-4" />
+            </button>
+            <button
+              type="button"
               onClick={() => {
                 const next = !item.favorite;
                 onUpsert({ ...item, favorite: next });
@@ -294,13 +378,14 @@ function Inspector({
               <Star className={cn("size-4", item.favorite && "fill-warning text-warning")} />
             </button>
             <button
+              type="button"
               onClick={() => openShare(item.title)}
               className="size-9 rounded-lg hover:bg-muted grid place-items-center"
               title="Share"
             >
               <Share2 className="size-4" />
             </button>
-            <button className="size-9 rounded-lg hover:bg-muted grid place-items-center">
+            <button type="button" className="size-9 rounded-lg hover:bg-muted grid place-items-center">
               <MoreHorizontal className="size-4" />
             </button>
           </div>
@@ -319,201 +404,197 @@ function Inspector({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-5 no-scrollbar">
-        {item.username !== undefined && (
-          <Row label="Username">
-            <input
-              value={item.username ?? ""}
-              onChange={(e) => updateItem(item.id, { username: e.target.value })}
-              onBlur={(e) => commitPatch({ username: e.target.value })}
-              className="field"
-            />
-            <ActionBtn onClick={() => copy(item.username, "Username")}>
-              <Copy className="size-3.5" />
-            </ActionBtn>
-          </Row>
-        )}
-
-        {item.password !== undefined && (
-          <Row label="Password">
-            <input
-              value={reveal ? (item.password ?? "") : maskValue(item.password ?? "")}
-              readOnly={!reveal}
-              onChange={(e) => updateItem(item.id, { password: e.target.value })}
-              onBlur={(e) => commitPatch({ password: e.target.value })}
-              className="field mono"
-            />
-            <ActionBtn onClick={() => setReveal((v) => !v)}>
-              {reveal ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-            </ActionBtn>
-            <ActionBtn onClick={() => copy(item.password, "Password")}>
-              <Copy className="size-3.5" />
-            </ActionBtn>
-            <ActionBtn
-              onClick={() => {
-                const generated = generatePassword({ length: 20 });
-                updateItem(item.id, { password: generated });
-                commitPatch({ password: generated });
-                toast.success("New password generated");
-              }}
-            >
-              <RefreshCw className="size-3.5" />
-            </ActionBtn>
-          </Row>
-        )}
-
-        {item.password !== undefined && (
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-ink-muted">Strength</span>
-              <span
-                className={cn(
-                  "font-medium",
-                  str.score >= 3
-                    ? "text-success"
-                    : str.score === 2
-                      ? "text-warning"
-                      : "text-destructive",
-                )}
-              >
-                {str.label}
-              </span>
-            </div>
-            <div className="flex gap-1">
-              {[0, 1, 2, 3].map((i) => (
-                <span
-                  key={i}
-                  className={cn(
-                    "h-1.5 flex-1 rounded-full",
-                    i < str.score ? "bg-brand" : "bg-muted",
-                  )}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {item.url && (
-          <Row label="Website">
-            <input
-              value={item.url}
-              onChange={(e) => updateItem(item.id, { url: e.target.value })}
-              onBlur={(e) => commitPatch({ url: e.target.value })}
-              className="field"
-            />
-            <ActionBtn onClick={() => window.open(item.url, "_blank")}>
-              <ExternalLink className="size-3.5" />
-            </ActionBtn>
-          </Row>
-        )}
-
-        {item.type === "card" && (
-          <>
-            <Row label="Card number">
-              <input value={item.cardNumber ?? ""} readOnly className="field mono" />
-              <ActionBtn onClick={() => copy(item.cardNumber, "Card")}>
-                <Copy className="size-3.5" />
-              </ActionBtn>
-            </Row>
-            <div className="grid grid-cols-3 gap-3">
-              <Field label="Holder">
-                <input value={item.cardHolder ?? ""} readOnly className="field" />
-              </Field>
-              <Field label="Expiry">
-                <input value={item.cardExpiry ?? ""} readOnly className="field mono" />
-              </Field>
-              <Field label="CVV">
+      <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
+        <div className="mx-auto w-full max-w-2xl px-4 md:px-6 lg:px-8 xl:px-0 py-6 space-y-5 lg:max-w-xl xl:max-w-2xl">
+          {item.username !== undefined &&
+            (editing ? (
+              <Row label="Username">
                 <input
-                  value={reveal ? (item.cardCvv ?? "") : "•••"}
-                  readOnly
-                  className="field mono"
+                  value={item.username ?? ""}
+                  onChange={(e) => updateItem(item.id, { username: e.target.value })}
+                  onBlur={(e) => commitPatch({ username: e.target.value })}
+                  className="field"
                 />
-              </Field>
+              </Row>
+            ) : (
+              <ViewField label="Username" value={item.username ?? ""} />
+            ))}
+
+          {item.password !== undefined &&
+            (editing ? (
+              <>
+                <Row label="Password">
+                  <input
+                    value={item.password ?? ""}
+                    onChange={(e) => updateItem(item.id, { password: e.target.value })}
+                    onBlur={(e) => commitPatch({ password: e.target.value })}
+                    className="field mono"
+                  />
+                  <ActionBtn
+                    onClick={() => {
+                      const generated = generatePassword({ length: 20 });
+                      updateItem(item.id, { password: generated });
+                      commitPatch({ password: generated });
+                      toast.success("New password generated");
+                    }}
+                  >
+                    <RefreshCw className="size-3.5" />
+                  </ActionBtn>
+                </Row>
+              </>
+            ) : (
+              <ViewField
+                label="Password"
+                value={item.password ?? ""}
+                secret
+                revealed={revealPassword}
+                onToggleReveal={() => setRevealPassword((v) => !v)}
+              />
+            ))}
+
+          {item.password !== undefined && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-ink-muted">Strength</span>
+                <span
+                  className={cn(
+                    "font-medium",
+                    str.score >= 3
+                      ? "text-success"
+                      : str.score === 2
+                        ? "text-warning"
+                        : "text-destructive",
+                  )}
+                >
+                  {str.label}
+                </span>
+              </div>
+              <div className="flex gap-1">
+                {[0, 1, 2, 3].map((i) => (
+                  <span
+                    key={i}
+                    className={cn(
+                      "h-1.5 flex-1 rounded-full",
+                      i < str.score ? "bg-brand" : "bg-muted",
+                    )}
+                  />
+                ))}
+              </div>
             </div>
-          </>
-        )}
+          )}
 
-        {item.identity && (
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Full name">
-              <input value={item.identity.fullName} readOnly className="field" />
+          {item.url &&
+            (editing ? (
+              <Row label="Website">
+                <input
+                  value={item.url}
+                  onChange={(e) => updateItem(item.id, { url: e.target.value })}
+                  onBlur={(e) => commitPatch({ url: e.target.value })}
+                  className="field"
+                />
+                <ActionBtn onClick={() => window.open(item.url, "_blank")}>
+                  <ExternalLink className="size-3.5" />
+                </ActionBtn>
+              </Row>
+            ) : (
+              <ViewField
+                label="Website"
+                value={item.url.replace(/^https?:\/\//, "")}
+                onCopy={() => copy(item.url, "Website")}
+              />
+            ))}
+
+          {item.type === "card" && !editing && (
+            <>
+              <ViewField label="Card number" value={item.cardNumber ?? ""} secret mono />
+              <div className="grid grid-cols-3 gap-3">
+                <ViewField label="Holder" value={item.cardHolder ?? ""} compact />
+                <ViewField label="Expiry" value={item.cardExpiry ?? ""} compact mono />
+                <ViewField label="CVV" value={item.cardCvv ?? ""} secret compact mono />
+              </div>
+            </>
+          )}
+
+          {item.identity && !editing && (
+            <div className="grid grid-cols-2 gap-3">
+              <ViewField label="Full name" value={item.identity.fullName} compact />
+              <ViewField label="Number" value={item.identity.number} compact mono />
+              <ViewField label="Country" value={item.identity.country} compact />
+              <ViewField label="Expiry" value={item.identity.expiry ?? ""} compact />
+            </div>
+          )}
+
+          {editing ? (
+            <Field label="Notes">
+              <textarea
+                value={item.notes ?? ""}
+                onChange={(e) => updateItem(item.id, { notes: e.target.value })}
+                onBlur={(e) => commitPatch({ notes: e.target.value })}
+                rows={3}
+                className="field resize-none py-2.5"
+                placeholder="Add notes…"
+              />
             </Field>
-            <Field label="Number">
-              <input value={item.identity.number} readOnly className="field mono" />
-            </Field>
-            <Field label="Country">
-              <input value={item.identity.country} readOnly className="field" />
-            </Field>
-            <Field label="Expiry">
-              <input value={item.identity.expiry ?? ""} readOnly className="field" />
-            </Field>
-          </div>
-        )}
+          ) : (
+            <ViewField label="Notes" value={item.notes?.trim() ? item.notes : "Add notes…"} mutedEmpty />
+          )}
 
-        <Field label="Notes">
-          <textarea
-            value={item.notes ?? ""}
-            onChange={(e) => updateItem(item.id, { notes: e.target.value })}
-            onBlur={(e) => commitPatch({ notes: e.target.value })}
-            rows={3}
-            className="field resize-none py-2.5"
-            placeholder="Add notes…"
-          />
-        </Field>
+          {item.url && !editing && (
+            <div className="flex items-center gap-2 text-xs text-ink-muted">
+              <Globe className="size-3.5 shrink-0" />
+              <span className="truncate">{item.url.replace(/^https?:\/\//, "")}</span>
+            </div>
+          )}
 
-        {item.url && (
-          <div className="flex items-center gap-2 text-xs text-ink-muted">
-            <Globe className="size-3.5" /> {item.url.replace(/^https?:\/\//, "")}
-          </div>
-        )}
-
-        <Section title="Security overview">
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <Stat
-              label="Strength"
-              value={str.label}
-              tone={str.score >= 3 ? "good" : str.score === 2 ? "warn" : "bad"}
-            />
-            <Stat
-              label="Breach"
-              value={item.breached ? "Detected" : "Clean"}
-              tone={item.breached ? "bad" : "good"}
-            />
-            <Stat
-              label="2FA"
-              value={item.otpSecret ? "Enabled" : "Off"}
-              tone={item.otpSecret ? "good" : "warn"}
-            />
-          </div>
-        </Section>
-
-        {item.history.length > 0 && (
-          <Section title="Password history">
-            <ul className="space-y-1.5">
-              {item.history.map((h, i) => (
-                <li key={i} className="flex items-center justify-between text-xs">
-                  <span className="mono text-ink-muted">{maskValue(h.password)}</span>
-                  <span className="text-ink-faint">{timeAgo(h.changedAt)} ago</span>
-                </li>
-              ))}
-            </ul>
+          <Section title="Security overview">
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <Stat
+                label="Strength"
+                value={str.label}
+                tone={str.score >= 3 ? "good" : str.score === 2 ? "warn" : "bad"}
+              />
+              <Stat
+                label="Breach"
+                value={item.breached ? "Detected" : "Clean"}
+                tone={item.breached ? "bad" : "good"}
+              />
+              <Stat
+                label="2FA"
+                value={item.otpSecret ? "Enabled" : "Off"}
+                tone={item.otpSecret ? "good" : "warn"}
+              />
+            </div>
           </Section>
-        )}
 
-        <Section title="Metadata">
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <Meta k="Created" v={new Date(item.createdAt).toLocaleDateString()} />
-            <Meta k="Modified" v={new Date(item.updatedAt).toLocaleDateString()} />
-            <Meta k="Last opened" v={timeAgo(item.lastOpenedAt) + " ago"} />
-            <Meta k="Vault" v={item.vault} />
-          </div>
-        </Section>
+          {item.history.length > 0 && (
+            <Section title="Password history">
+              <ul className="space-y-1.5">
+                {item.history.map((h, i) => (
+                  <li key={i} className="flex items-center justify-between text-xs">
+                    <span className="mono text-ink-muted">{maskValue(h.password)}</span>
+                    <span className="text-ink-faint">{timeAgo(h.changedAt)} ago</span>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          )}
+
+          <Section title="Metadata">
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <Meta k="Created" v={new Date(item.createdAt).toLocaleDateString()} />
+              <Meta k="Modified" v={new Date(item.updatedAt).toLocaleDateString()} />
+              <Meta k="Last opened" v={timeAgo(item.lastOpenedAt) + " ago"} />
+              <Meta k="Vault" v={item.vault} />
+            </div>
+          </Section>
+        </div>
       </div>
 
-      <div className="px-6 py-3 border-t border-hairline flex items-center justify-between bg-surface/60">
+      <div className="shrink-0 px-4 md:px-6 lg:px-[10%] xl:px-[18%] py-3 border-t border-hairline flex items-center justify-between bg-surface/60">
         <div className="text-xs text-ink-faint">End-to-end encrypted</div>
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => {
               onUpsert({ ...item, archived: true });
               commitPatch({ archived: true });
@@ -524,6 +605,7 @@ function Inspector({
             Archive
           </button>
           <button
+            type="button"
             onClick={() => {
               onDeleteRemote(item.id)
                 .then(() => {
@@ -541,6 +623,87 @@ function Inspector({
       </div>
 
       <style>{`.field{height:38px;padding:0 12px;border-radius:10px;border:1px solid var(--hairline);background:var(--surface);font-size:13.5px;width:100%;outline:none}.field:focus{box-shadow:0 0 0 3px color-mix(in oklab, var(--brand) 22%, transparent);border-color:transparent}`}</style>
+    </div>
+  );
+}
+
+function ViewField({
+  label,
+  value,
+  secret,
+  revealed,
+  onToggleReveal,
+  onCopy,
+  mono,
+  compact,
+  mutedEmpty,
+}: {
+  label: string;
+  value: string;
+  secret?: boolean;
+  revealed?: boolean;
+  onToggleReveal?: () => void;
+  onCopy?: () => void;
+  mono?: boolean;
+  compact?: boolean;
+  mutedEmpty?: boolean;
+}) {
+  const [hover, setHover] = useState(false);
+  const display =
+    secret && !revealed ? maskValue(value) : value || (mutedEmpty ? "Add notes…" : "—");
+
+  const handleCopy = () => {
+    if (mutedEmpty && !value.trim()) return;
+    if (onCopy) onCopy();
+    else copy(value, label);
+  };
+
+  return (
+    <div className={compact ? "" : ""}>
+      <div className="text-xs font-medium text-ink-muted mb-1.5">{label}</div>
+      <button
+        type="button"
+        onClick={handleCopy}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        className={cn(
+          "group w-full text-left relative flex items-center gap-2 rounded-xl px-3 py-2.5 transition-colors",
+          hover && "bg-muted/45",
+          mutedEmpty && !value.trim() && "text-ink-faint",
+        )}
+      >
+        <span className={cn("flex-1 text-sm truncate", mono && "mono", secret && "mono")}>
+          {display}
+        </span>
+        {hover && (
+          <span className="flex items-center gap-0.5 shrink-0 text-ink-muted">
+            {secret && onToggleReveal && (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleReveal();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onToggleReveal();
+                  }
+                }}
+                className="size-8 rounded-lg hover:bg-surface/80 grid place-items-center"
+                aria-label={revealed ? "Hide value" : "Reveal value"}
+              >
+                {revealed ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+              </span>
+            )}
+            <span className="size-8 rounded-lg hover:bg-surface/80 grid place-items-center">
+              <Copy className="size-3.5" />
+            </span>
+          </span>
+        )}
+      </button>
     </div>
   );
 }

@@ -12,7 +12,7 @@ import {
   Settings,
   Sun,
   Moon,
-  Plus,
+  // Plus,
 } from "lucide-react";
 import { useVault } from "@/lib/vault-store";
 import { getClientSession, subscribeToClientSession, type ClientSession } from "@/lib/auth";
@@ -50,14 +50,15 @@ export function Sidebar({ onNew }: { onNew?: () => void }) {
         <Shield className="size-5" />
       </Link>
 
-      <button
+      {/* New-item shortcut hidden until product enables sidebar create */}
+      {/* <button
         onClick={onNew}
         className="size-10 rounded-xl bg-brand text-brand-foreground grid place-items-center shadow-float hover:scale-[1.04] transition ring-brand-soft"
         aria-label="New item"
         title="New item (⌘N)"
       >
         <Plus className="size-5" />
-      </button>
+      </button> */}
 
       <div className="mt-2 flex flex-col gap-1">
         {NAV.map((n) => {

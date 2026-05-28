@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { TYPE_META, TYPE_LIST } from "@/lib/item-meta";
 import { useVault } from "@/lib/vault-store";
 import { generatePassword } from "@/lib/password";
@@ -21,6 +21,7 @@ export function NewItemModal({ open, onClose }: { open: boolean; onClose: () => 
   const [password, setPassword] = useState("");
   const [url, setUrl] = useState("");
   const [notes, setNotes] = useState("");
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -31,25 +32,28 @@ export function NewItemModal({ open, onClose }: { open: boolean; onClose: () => 
       setPassword("");
       setUrl("");
       setNotes("");
+      setCreating(false);
     }
   }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && !creating) onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, creating]);
 
   if (!open) return null;
 
   const onCreate = async () => {
+    if (creating) return;
     if (!title.trim()) {
       toast.error("Give the item a name");
       return;
     }
+    setCreating(true);
     try {
       const result = await createVaultItemAction({
         data: {
@@ -68,6 +72,7 @@ export function NewItemModal({ open, onClose }: { open: boolean; onClose: () => 
       navigate({ to: "/vault" });
     } catch (err) {
       toast.error(toActionMessage(err));
+      setCreating(false);
     }
   };
 
@@ -85,6 +90,7 @@ export function NewItemModal({ open, onClose }: { open: boolean; onClose: () => 
           </div>
           <button
             onClick={onClose}
+            disabled={creating}
             className="size-8 rounded-lg hover:bg-muted grid place-items-center"
           >
             <X className="size-4" />
@@ -99,11 +105,12 @@ export function NewItemModal({ open, onClose }: { open: boolean; onClose: () => 
               return (
                 <button
                   key={t}
+                  disabled={creating}
                   onClick={() => {
                     setType(t);
                     setStep("form");
                   }}
-                  className="group flex items-center gap-3 p-3 rounded-xl hairline hover:shadow-float hover:-translate-y-0.5 transition text-left bg-surface"
+                  className="group flex items-center gap-3 p-3 rounded-xl hairline hover:shadow-float hover:-translate-y-0.5 transition text-left bg-surface disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
                 >
                   <span className={`size-10 rounded-xl grid place-items-center ${M.tint}`}>
                     <Icon className="size-5" />
@@ -144,8 +151,9 @@ export function NewItemModal({ open, onClose }: { open: boolean; onClose: () => 
                     />
                     <button
                       type="button"
+                      disabled={creating}
                       onClick={() => setPassword(generatePassword({ length: 20 }))}
-                      className="h-10 px-3 rounded-lg bg-brand text-brand-foreground text-sm"
+                      className="h-10 px-3 rounded-lg bg-brand text-brand-foreground text-sm disabled:opacity-60"
                     >
                       Generate
                     </button>
@@ -175,19 +183,32 @@ export function NewItemModal({ open, onClose }: { open: boolean; onClose: () => 
             <div className="flex items-center justify-between pt-2">
               <button
                 onClick={() => setStep("pick")}
+                disabled={creating}
                 className="text-sm text-ink-muted hover:text-ink"
               >
                 ← Change type
               </button>
               <div className="flex gap-2">
-                <button onClick={onClose} className="h-10 px-3 rounded-lg hairline text-sm">
+                <button
+                  onClick={onClose}
+                  disabled={creating}
+                  className="h-10 px-3 rounded-lg hairline text-sm disabled:opacity-60"
+                >
                   Cancel
                 </button>
                 <button
                   onClick={onCreate}
-                  className="h-10 px-4 rounded-lg bg-brand text-brand-foreground text-sm font-medium shadow-float"
+                  disabled={creating}
+                  className="h-10 min-w-24 px-4 rounded-lg bg-brand text-brand-foreground text-sm font-medium shadow-float inline-flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  Save
+                  {creating ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save"
+                  )}
                 </button>
               </div>
             </div>

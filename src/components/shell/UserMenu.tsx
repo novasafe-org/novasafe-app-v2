@@ -10,6 +10,7 @@ import {
   type ClientSession,
 } from "@/lib/auth";
 import { clearAuthGateCache } from "@/lib/auth/session-gate";
+import { clearVaultSessionData } from "@/lib/vault-store";
 import { buildLoginUrl } from "@/config";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +52,7 @@ export function UserMenu() {
       console.error("[UserMenu] logout failed", err);
     } finally {
       clearAuthGateCache();
+      clearVaultSessionData();
       clearClientSession();
       window.location.assign(buildLoginUrl());
     }
