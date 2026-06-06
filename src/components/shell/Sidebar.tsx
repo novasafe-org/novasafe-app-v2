@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { useVault } from "@/lib/vault-store";
 import { getClientSession, subscribeToClientSession, type ClientSession } from "@/lib/auth";
-import { appConfig } from "@/config";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -32,7 +31,7 @@ const NAV = [
   // { to: "/shared", label: "Shared", icon: Share2 },
 ] as const;
 
-const LANDING_LOGO_URL = `${appConfig.urls.landing}/logo.svg`;
+const BRAND_ICON_URL = "/brand-icon.png";
 
 export function Sidebar({ onNew }: { onNew?: () => void }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
@@ -45,12 +44,12 @@ export function Sidebar({ onNew }: { onNew?: () => void }) {
 
   return (
     <aside className="hidden md:flex w-[68px] shrink-0 flex-col items-center py-4 gap-2 border-r border-hairline bg-surface/60">
-      <Link
-        to="/vault"
-        className="size-10 rounded-xl brand-gradient grid place-items-center text-white shadow-float mb-2"
-        aria-label="NovaSafe"
-      >
-        <img src={LANDING_LOGO_URL} alt="NovaSafe" className="size-5 object-contain" />
+      <Link to="/vault" className="mb-2 shrink-0" aria-label="NovaSafe">
+        <img
+          src={BRAND_ICON_URL}
+          alt="NovaSafe"
+          className="size-10 rounded-xl object-cover shadow-float"
+        />
       </Link>
 
       {/* New-item shortcut hidden until product enables sidebar create */}
