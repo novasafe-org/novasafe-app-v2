@@ -30,12 +30,30 @@ export const seedItems: VaultItem[] = [
     updatedAt: days(4),
     lastOpenedAt: days(1),
     history: [
-      { password: "G6!h$Pa9wzQx-2025", changedAt: days(180) },
-      { password: "OldGit#2024-pass", changedAt: days(400) },
+      {
+        id: "ph_1",
+        password: "G6!h$Pa9wzQx-2025",
+        createdAt: days(180),
+        active: false,
+      },
+      {
+        id: "ph_2",
+        password: "OldGit#2024-pass",
+        createdAt: days(400),
+        active: false,
+      },
     ],
     otpSecret: "JBSWY3DPEHPK3PXP",
     breached: false,
-    customFields: [{ label: "Recovery email", value: "pavank.recovery@gmail.com", secret: false }],
+    customFields: [
+      {
+        id: "cf_1",
+        name: "Recovery email",
+        value: "pavank.recovery@gmail.com",
+        isSensitive: false,
+        type: "EMAIL",
+      },
+    ],
   },
   {
     id: "itm_2",

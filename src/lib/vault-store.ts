@@ -138,6 +138,7 @@ export const useVault = create<State & Actions>()(
           updatedAt: Date.now(),
           lastOpenedAt: Date.now(),
           history: [],
+          customFields: [],
           ...partial,
         };
         set((s) => ({ items: [item, ...s.items], selectedId: id }));
@@ -182,7 +183,15 @@ export const useVault = create<State & Actions>()(
         const it = get().items.find((i) => i.id === id);
         if (!it) return;
         const history = it.password
-          ? [{ password: it.password, changedAt: Date.now() }, ...it.history].slice(0, 10)
+          ? [
+              {
+                id: `local-${Date.now()}`,
+                password: it.password,
+                createdAt: Date.now(),
+                active: false,
+              },
+              ...it.history,
+            ].slice(0, 10)
           : it.history;
         get().updateItem(id, { password, history });
       },

@@ -26,6 +26,26 @@ export interface VaultDeleteResponse {
   message?: string;
 }
 
+export interface CoreCustomField {
+  id: string;
+  credential_id?: string;
+  field_label?: string;
+  field_type?: string;
+  field_value?: string;
+  is_sensitive?: boolean;
+  created_at?: string | Date;
+  updated_at?: string | Date;
+}
+
+export interface CorePasswordVersion {
+  id: string;
+  credential_id?: string;
+  password?: string;
+  is_expired?: boolean;
+  created_at?: string | Date;
+  updated_at?: string | Date;
+}
+
 export interface CoreVaultItem {
   id: string;
   type?: string;
@@ -40,13 +60,20 @@ export interface CoreVaultItem {
   updatedAt?: string | Date;
   createdAt?: string | Date;
   lastAccessedAt?: string | Date | null;
-  password_versions?: Array<{ password?: string; changedAt?: string | Date; createdAt?: string | Date }>;
-  custom_fields?: Array<{ label?: string; value?: string; secret?: boolean }>;
+  password_versions?: CorePasswordVersion[];
+  custom_fields?: CoreCustomField[];
   cardNumber?: string;
   cardHolder?: string;
   cardExpiry?: string;
   cardCvv?: string;
   breached?: boolean;
+}
+
+export interface CustomFieldPayload {
+  field_label: string;
+  field_type: string;
+  field_value: string;
+  is_sensitive?: boolean;
 }
 
 export const vaultApi = {
@@ -98,6 +125,50 @@ export const vaultApi = {
       method: "DELETE",
       token,
     });
+  },
+
+  addCustomField(token: string, itemId: string, payload: CustomFieldPayload) {
+    return apiFetch<VaultItemResponse<CoreVaultItem>>(`${PREFIX}/items/${itemId}/custom-fields`, {
+      method: "POST",
+      token,
+      body: payload,
+    });
+  },
+
+  updateCustomField(
+    token: string,
+    itemId: string,
+    fieldId: string,
+    payload: Partial<CustomFieldPayload>,
+  ) {
+    return apiFetch<VaultItemResponse<CoreVaultItem>>(
+      `${PREFIX}/items/${itemId}/custom-fields/${fieldId}`,
+      {
+        method: "PUT",
+        token,
+        body: payload,
+      },
+    );
+  },
+
+  deleteCustomField(token: string, itemId: string, fieldId: string) {
+    return apiFetch<VaultItemResponse<CoreVaultItem>>(
+      `${PREFIX}/items/${itemId}/custom-fields/${fieldId}`,
+      {
+        method: "DELETE",
+        token,
+      },
+    );
+  },
+
+  deletePasswordVersion(token: string, itemId: string, versionId: string) {
+    return apiFetch<VaultItemResponse<CoreVaultItem>>(
+      `${PREFIX}/items/${itemId}/password-versions/${versionId}`,
+      {
+        method: "DELETE",
+        token,
+      },
+    );
   },
 };
 

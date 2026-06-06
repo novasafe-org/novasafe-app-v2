@@ -6,6 +6,8 @@ import { generatePassword } from "@/lib/password";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { createVaultItemAction, toActionMessage } from "@/lib/vault/server-actions";
+import { CustomFieldsEditor } from "@/components/vault/item-sections";
+import type { CustomField } from "@/lib/vault-types";
 import { useQueryClient } from "@tanstack/react-query";
 
 const VAULT_ITEMS_QUERY_KEY = ["vault", "items"] as const;
@@ -21,6 +23,7 @@ export function NewItemModal({ open, onClose }: { open: boolean; onClose: () => 
   const [password, setPassword] = useState("");
   const [url, setUrl] = useState("");
   const [notes, setNotes] = useState("");
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -32,6 +35,7 @@ export function NewItemModal({ open, onClose }: { open: boolean; onClose: () => 
       setPassword("");
       setUrl("");
       setNotes("");
+      setCustomFields([]);
       setCreating(false);
     }
   }, [open]);
@@ -63,6 +67,7 @@ export function NewItemModal({ open, onClose }: { open: boolean; onClose: () => 
           password,
           url,
           notes,
+          customFields: customFields.filter((field) => field.name.trim()),
         },
       });
       upsertItem(result.item);
@@ -179,6 +184,8 @@ export function NewItemModal({ open, onClose }: { open: boolean; onClose: () => 
                 className="input resize-none"
               />
             </Field>
+
+            <CustomFieldsEditor fields={customFields} onChange={setCustomFields} />
 
             <div className="flex items-center justify-between pt-2">
               <button

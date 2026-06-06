@@ -26,8 +26,18 @@ import {
   listVaultItemsAction,
   patchVaultItemAction,
   deleteVaultItemAction,
+  getVaultItemAction,
+  deletePasswordVersionAction,
+  deleteCustomFieldAction,
+  syncCustomFieldsAction,
   toActionMessage,
 } from "@/lib/vault/server-actions";
+import {
+  CustomFieldsEditor,
+  CustomFieldsSection,
+  PasswordHistorySection,
+} from "@/components/vault/item-sections";
+import type { CustomField } from "@/lib/vault-types";
 
 const VAULT_ITEMS_QUERY_KEY = ["vault", "items"] as const;
 
@@ -316,6 +326,8 @@ function Inspector({
 }) {
   const [editing, setEditing] = useState(false);
   const [revealPassword, setRevealPassword] = useState(false);
+  const [customFieldsDraft, setCustomFieldsDraft] = useState<CustomField[]>([]);
+  const [loadingDetails, setLoadingDetails] = useState(false);
   const updateItem = useVault((s) => s.updateItem);
   const openShare = useUI((s) => s.openShare);
   const M = TYPE_META[item.type];
@@ -325,12 +337,80 @@ function Inspector({
   useEffect(() => {
     setEditing(false);
     setRevealPassword(false);
+    setCustomFieldsDraft([]);
   }, [item.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingDetails(true);
+    getVaultItemAction({ data: { id: item.id, revealSensitive: true } })
+      .then((result) => {
+        if (!cancelled) onUpsert(result.item);
+      })
+      .catch((err) => {
+        if (!cancelled) console.error("[Inspector] failed loading item details", err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingDetails(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [item.id, onUpsert]);
+
+  useEffect(() => {
+    if (editing) {
+      setCustomFieldsDraft(item.customFields.map((field) => ({ ...field })));
+    }
+  }, [editing, item.customFields]);
 
   async function commitPatch(patch: Record<string, unknown>) {
     try {
       const result = await onPatch(item.id, patch);
       onUpsert(result.item);
+    } catch (err) {
+      toast.error(toActionMessage(err));
+    }
+  }
+
+  async function toggleEditing() {
+    if (editing) {
+      try {
+        const result = await syncCustomFieldsAction({
+          data: {
+            itemId: item.id,
+            previous: item.customFields,
+            next: customFieldsDraft,
+          },
+        });
+        onUpsert(result.item);
+      } catch (err) {
+        toast.error(toActionMessage(err));
+        return;
+      }
+    }
+    setEditing((v) => !v);
+  }
+
+  async function handleDeletePasswordVersion(versionId: string) {
+    try {
+      const result = await deletePasswordVersionAction({
+        data: { itemId: item.id, versionId },
+      });
+      onUpsert(result.item);
+      toast.success("Password version deleted");
+    } catch (err) {
+      toast.error(toActionMessage(err));
+    }
+  }
+
+  async function handleDeleteCustomField(fieldId: string) {
+    try {
+      const result = await deleteCustomFieldAction({
+        data: { itemId: item.id, fieldId },
+      });
+      onUpsert(result.item);
+      toast.success("Custom field deleted");
     } catch (err) {
       toast.error(toActionMessage(err));
     }
@@ -356,7 +436,7 @@ function Inspector({
             )}
             <button
               type="button"
-              onClick={() => setEditing((v) => !v)}
+              onClick={() => void toggleEditing()}
               className={cn(
                 "size-9 rounded-lg grid place-items-center transition",
                 editing ? "bg-accent text-brand-ink" : "hover:bg-muted",
@@ -566,17 +646,25 @@ function Inspector({
             </div>
           </Section>
 
-          {item.history.length > 0 && (
-            <Section title="Password history">
-              <ul className="space-y-1.5">
-                {item.history.map((h, i) => (
-                  <li key={i} className="flex items-center justify-between text-xs">
-                    <span className="mono text-ink-muted">{maskValue(h.password)}</span>
-                    <span className="text-ink-faint">{timeAgo(h.changedAt)} ago</span>
-                  </li>
-                ))}
-              </ul>
-            </Section>
+          {editing ? (
+            <CustomFieldsEditor fields={customFieldsDraft} onChange={setCustomFieldsDraft} />
+          ) : (
+            <CustomFieldsSection
+              fields={item.customFields}
+              onAddField={() => void toggleEditing()}
+              onDeleteField={handleDeleteCustomField}
+            />
+          )}
+
+          {item.password !== undefined && (
+            <PasswordHistorySection
+              entries={item.history}
+              onDeleteEntry={handleDeletePasswordVersion}
+            />
+          )}
+
+          {loadingDetails && item.history.length === 0 && item.customFields.length === 0 && (
+            <p className="text-xs text-ink-muted">Loading secure fields…</p>
           )}
 
           <Section title="Metadata">

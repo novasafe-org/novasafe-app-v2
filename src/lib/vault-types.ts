@@ -12,14 +12,21 @@ export type ItemType =
   | "license"
   | "database";
 
-export interface PasswordHistory {
+export type CustomFieldType = "TEXT" | "PASSWORD" | "URL" | "EMAIL";
+
+export interface PasswordHistoryEntry {
+  id: string;
   password: string;
-  changedAt: number;
+  createdAt: number;
+  active: boolean;
 }
+
 export interface CustomField {
-  label: string;
+  id: string;
+  name: string;
   value: string;
-  secret: boolean;
+  isSensitive: boolean;
+  type?: CustomFieldType | string;
 }
 
 export interface VaultItem {
@@ -38,10 +45,10 @@ export interface VaultItem {
   createdAt: number;
   updatedAt: number;
   lastOpenedAt: number;
-  history: PasswordHistory[];
+  history: PasswordHistoryEntry[];
   otpSecret?: string;
   breached?: boolean;
-  customFields?: CustomField[];
+  customFields: CustomField[];
   // type-specific
   cardNumber?: string;
   cardHolder?: string;
