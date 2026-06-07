@@ -28,7 +28,7 @@ export function formatPlanLabel(state: Pick<SubscriptionState, "isPro" | "tier" 
 }
 
 export function formatSubscriptionStatusLabel(
-  status: SubscriptionLifecycleStatus,
+  status: SubscriptionLifecycleStatus | string | null | undefined,
   state: Pick<SubscriptionState, "inGracePeriod" | "billingIssueDetectedAt" | "cancellationAt" | "isActive">,
 ): string {
   if (state.inGracePeriod) return "Grace period";
@@ -38,7 +38,115 @@ export function formatSubscriptionStatusLabel(
   if (status === "active" && state.cancellationAt) return "Cancelled";
   if (status === "active") return "Active";
   if (status === "inactive" && !state.isActive) return "Inactive";
-  return status.replaceAll("_", " ");
+  if (typeof status === "string" && status.length > 0) return status.replaceAll("_", " ");
+  return "Unknown";
+}
+
+/** Coerce partial API payloads so billing UI never crashes on missing fields. */
+export function normalizeSubscriptionState(
+  raw: Partial<SubscriptionState> | null | undefined,
+): SubscriptionState {
+  const entitlements = raw?.entitlements ?? {};
+  const limits = raw?.limits ?? {};
+  return {
+    tier: raw?.tier === "pro" ? "pro" : "free",
+    isPro: Boolean(raw?.isPro),
+    productId: raw?.productId ?? null,
+    entitlementId: raw?.entitlementId ?? null,
+    isActive: Boolean(raw?.isActive),
+    expiresAt: raw?.expiresAt ?? null,
+    renewsAt: raw?.renewsAt ?? null,
+    purchasedAt: raw?.purchasedAt ?? null,
+    lastRenewalAt: raw?.lastRenewalAt ?? null,
+    cancellationAt: raw?.cancellationAt ?? null,
+    inGracePeriod: Boolean(raw?.inGracePeriod),
+    billingIssueDetectedAt: raw?.billingIssueDetectedAt ?? null,
+    trialEndsAt: raw?.trialEndsAt ?? null,
+    platform: raw?.platform ?? null,
+    autoRenewing: Boolean(raw?.autoRenewing),
+    subscriptionProvider: "revenuecat",
+    subscriptionStatus: (raw?.subscriptionStatus as SubscriptionLifecycleStatus) ?? "inactive",
+    entitlements: {
+      canUseCloudSync: Boolean(entitlements.canUseCloudSync),
+      canUseCSVImportExport: Boolean(entitlements.canUseCSVImportExport),
+      canUseUnlimitedPasswords: Boolean(entitlements.canUseUnlimitedPasswords),
+      canUseUnlimitedNotes: Boolean(entitlements.canUseUnlimitedNotes),
+      canUsePasswordHistory: Boolean(entitlements.canUsePasswordHistory),
+      canUseAdvancedSecurity: Boolean(entitlements.canUseAdvancedSecurity),
+      canUseMultiDevice: Boolean(entitlements.canUseMultiDevice),
+    },
+    limits: {
+      maxPasswords: Number(limits.maxPasswords) || 15,
+      maxSecureNotes: Number(limits.maxSecureNotes) || 5,
+      maxDevices: Number(limits.maxDevices) || 1,
+    },
+    updatedAt: raw?.updatedAt ?? new Date().toISOString(),
+  };
+}
+
+export function getRenewalDisplayDate(state: SubscriptionState): string | null {
+  if (state.subscriptionStatus === "cancelled" || state.cancellationAt) {
+    return formatBillingDate(state.expiresAt);
+  }
+  if (state.isPro && state.renewsAt) {
+    return formatBillingDate(state.renewsAt);
+  }
+  if (!state.isPro && state.expiresAt) {
+    return formatBillingDate(state.expiresAt);
+  }
+  return null;
+}
+
+export function getRenewalDisplayLabel(state: SubscriptionState): string | null {
+  if (state.subscriptionStatus === "cancelled" || state.cancellationAt) {
+    return state.isActive ? "Access until" : "Expired";
+  }
+  if (state.isPro && state.renewsAt) return "Renews";
+  if (!state.isPro && state.expiresAt) return "Expired";
+  return null;
+}
+
+export type BillingFeatureCard = {
+  id: string;
+  label: string;
+  value: string;
+  included: boolean;
+};
+
+export function buildBillingFeatureCards(state: SubscriptionState): BillingFeatureCard[] {
+  const { entitlements: e, limits: l } = state;
+  return [
+    {
+      id: "passwords",
+      label: "Passwords",
+      value: e.canUseUnlimitedPasswords ? "Unlimited" : `Up to ${l.maxPasswords}`,
+      included: e.canUseUnlimitedPasswords,
+    },
+    {
+      id: "devices",
+      label: "Devices",
+      value: e.canUseMultiDevice ? "All your devices" : `${l.maxDevices} trusted device`,
+      included: e.canUseMultiDevice,
+    },
+    {
+      id: "security",
+      label: "Security alerts",
+      value: e.canUseAdvancedSecurity ? "Priority monitoring" : "Breach monitoring",
+      included: e.canUseAdvancedSecurity,
+    },
+    {
+      id: "history",
+      label: "Password history",
+      value: e.canUsePasswordHistory ? "Full history" : "Pro feature",
+      included: e.canUsePasswordHistory,
+    },
+    {
+      id: "fields",
+      label: "Custom fields",
+      value: "Unlimited",
+      included: true,
+    },
+  ];
 }
 
 export function formatBillingDate(iso: string | null | undefined): string | null {

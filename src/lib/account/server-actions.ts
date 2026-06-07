@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { dashboardApi, settingsApi, subscriptionsApi, type DashboardSecuritySummary } from "@/lib/api";
 import { readSessionToken } from "@/lib/auth/session.server";
+import { normalizeSubscriptionState } from "@/lib/billing/subscription-display";
 
 function requireToken(): string {
   const token = readSessionToken();
@@ -20,10 +21,23 @@ export const loadMembershipAction = createServerFn({ method: "GET" }).handler(as
   const token = requireToken();
   try {
     const membership = await subscriptionsApi.getMembership(token);
+    const data = membership.data;
+    if (!data?.subscription) {
+      return {
+        ok: false as const,
+        message: "Billing data was incomplete. Please try again.",
+      };
+    }
+    const normalized = {
+      ...data,
+      purchases: data.purchases ?? [],
+      recentActivity: data.recentActivity ?? [],
+      subscription: normalizeSubscriptionState(data.subscription),
+    };
     return {
       ok: true as const,
-      membership: membership.data,
-      state: membership.data.subscription,
+      membership: normalized,
+      state: normalized.subscription,
     };
   } catch (error) {
     const message =
