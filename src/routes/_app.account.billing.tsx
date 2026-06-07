@@ -8,11 +8,7 @@ import {
   loadMembershipAction,
   syncSubscriptionAfterUpgradeAction,
 } from "@/lib/account/server-actions";
-import {
-  normalizeSubscriptionState,
-  shouldShowManageSubscription,
-  shouldShowUpgrade,
-} from "@/lib/billing/subscription-display";
+import { normalizeSubscriptionState } from "@/lib/billing/subscription-display";
 
 const billingSearchSchema = z.object({
   upgraded: z.enum(["1"]).optional().catch(undefined),
@@ -69,8 +65,6 @@ export const Route = createFileRoute("/_app/account/billing")({
           recentActivity={[]}
           upgradeUrl={upgradeUrl}
           manageUrl={manageUrl}
-          showUpgrade
-          showManage={false}
           errorMessage={loaderData.message}
           onRetry={() => void router.invalidate()}
         />
@@ -87,8 +81,6 @@ export const Route = createFileRoute("/_app/account/billing")({
         recentActivity={membership.recentActivity ?? []}
         upgradeUrl={upgradeUrl}
         manageUrl={manageUrl}
-        showUpgrade={shouldShowUpgrade(state)}
-        showManage={shouldShowManageSubscription(state, purchases)}
       />
     );
   },

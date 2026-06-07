@@ -5,6 +5,7 @@ import {
   History,
   KeyRound,
   Monitor,
+  RefreshCw,
   Shield,
   Sparkles,
   StickyNote,
@@ -13,11 +14,13 @@ import type { SubscriptionState } from "@/lib/api/endpoints/subscriptions";
 import {
   buildBillingFeatureCards,
   formatBillingDate,
-  formatPlanLabel,
   formatSubscriptionStatusLabel,
+  getBillingPageActions,
   getRenewalDisplayDate,
   getRenewalDisplayLabel,
   mergeBillingHistoryRows,
+  partitionBillingHistory,
+  shouldShowBillingHistory,
   type PurchaseRecord,
   type BillingActivityRecord,
 } from "@/lib/billing/subscription-display";
@@ -28,8 +31,6 @@ type BillingPageViewProps = {
   recentActivity: BillingActivityRecord[];
   upgradeUrl: string;
   manageUrl: string;
-  showUpgrade: boolean;
-  showManage: boolean;
   onRetry?: () => void;
   errorMessage?: string | null;
 };
@@ -48,18 +49,18 @@ export function BillingPageView({
   recentActivity,
   upgradeUrl,
   manageUrl,
-  showUpgrade,
-  showManage,
   onRetry,
   errorMessage,
 }: BillingPageViewProps) {
-  const planLabel = formatPlanLabel(state);
+  const actions = getBillingPageActions(state, purchases);
   const statusLabel = formatSubscriptionStatusLabel(state.subscriptionStatus, state);
   const renewalLabel = getRenewalDisplayLabel(state);
   const renewalDate = getRenewalDisplayDate(state);
   const historyRows = mergeBillingHistoryRows(purchases, recentActivity);
+  const historySections = partitionBillingHistory(historyRows, actions.uxState);
+  const showHistory = shouldShowBillingHistory(actions.uxState, historyRows);
   const featureCards = buildBillingFeatureCards(state);
-  const isPro = state.isPro || state.tier === "pro";
+  const isPro = actions.uxState === "pro" || actions.uxState === "cancelled_active";
 
   return (
     <div className="p-6 max-w-3xl space-y-5">
@@ -83,7 +84,6 @@ export function BillingPageView({
         </div>
       ) : null}
 
-      {/* Current plan — compact premium card */}
       <section className="rounded-2xl hairline overflow-hidden bg-gradient-to-br from-surface via-surface to-brand-softer/30 dark:from-[oklch(0.17_0.02_250)] dark:via-[oklch(0.19_0.025_252)] dark:to-[oklch(0.22_0.04_250)]">
         <div className="p-4 sm:p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -110,12 +110,9 @@ export function BillingPageView({
 
               <div>
                 <h2 className="text-2xl font-semibold tracking-tight text-ink sm:text-[1.65rem]">
-                  {planLabel === "Free" ? "NovaSafe Free" : `NovaSafe ${planLabel}`}
+                  {actions.planHeadline}
                 </h2>
-                <p className="mt-1 text-sm text-ink-muted">
-                  {isPro ? "Active subscription" : "Free plan"}
-                  {state.purchasedAt ? ` · Member since ${formatBillingDate(state.purchasedAt)}` : ""}
-                </p>
+                <p className="mt-1 text-sm text-ink-muted">{actions.planSubline}</p>
               </div>
 
               {renewalLabel && renewalDate ? (
@@ -127,16 +124,25 @@ export function BillingPageView({
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-hairline/80 pt-4">
-            {showUpgrade ? (
+            {actions.showUpgrade ? (
               <a
                 href={upgradeUrl}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3.5 text-sm font-semibold text-brand-foreground transition hover:opacity-95"
               >
                 <Sparkles className="size-3.5" />
-                Upgrade to Pro
+                {actions.upgradeLabel}
               </a>
             ) : null}
-            {showManage ? (
+            {actions.showResume ? (
+              <a
+                href={manageUrl}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3.5 text-sm font-semibold text-brand-foreground transition hover:opacity-95"
+              >
+                <RefreshCw className="size-3.5" />
+                Resume subscription
+              </a>
+            ) : null}
+            {actions.showManage ? (
               <a
                 href={manageUrl}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-hairline bg-surface/80 px-3.5 text-sm font-semibold text-ink transition hover:bg-surface-elev"
@@ -144,7 +150,7 @@ export function BillingPageView({
                 Manage subscription
               </a>
             ) : null}
-            {showManage ? (
+            {actions.showBillingPortal ? (
               <a
                 href={manageUrl}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-hairline bg-transparent px-3.5 text-sm font-medium text-ink-muted transition hover:text-ink sm:ml-auto"
@@ -152,21 +158,14 @@ export function BillingPageView({
                 Billing portal <ExternalLink className="size-3.5" />
               </a>
             ) : null}
-            {!isPro && purchases.length > 0 ? (
-              <a
-                href={upgradeUrl}
-                className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium text-brand hover:underline"
-              >
-                Resubscribe
-              </a>
-            ) : null}
           </div>
         </div>
       </section>
 
-      {/* Features */}
       <section className="space-y-3">
-        <h3 className="text-sm font-medium text-ink">Plan features</h3>
+        <h3 className="text-sm font-medium text-ink">
+          {actions.uxState === "free" ? "Free plan limits" : "Plan features"}
+        </h3>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {featureCards.map((card) => {
             const Icon = featureIcons[card.id as keyof typeof featureIcons] ?? Sparkles;
@@ -194,43 +193,47 @@ export function BillingPageView({
         </div>
       </section>
 
-      {/* Billing history — timeline cards */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-medium text-ink">Billing history</h3>
-          <span className="text-[11px] text-ink-faint">{historyRows.length} events</span>
-        </div>
-
-        <div className="rounded-2xl hairline bg-surface/60 divide-y divide-hairline overflow-hidden">
-          {historyRows.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-ink-muted">No billing activity yet.</p>
-          ) : (
-            historyRows.map((row) => (
-              <div key={row.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-ink truncate">{row.label}</p>
-                  <p className="text-xs text-ink-muted mt-0.5">
-                    {row.date ? formatBillingDate(row.date) : "—"}
-                    {row.plan !== "—" ? ` · ${row.plan}` : ""}
-                  </p>
-                </div>
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${
-                    row.status.toLowerCase().includes("complete") || row.status === "Processed"
-                      ? "bg-success/15 text-success"
-                      : "bg-muted text-ink-muted"
-                  }`}
-                >
-                  {row.status}
-                </span>
+      {showHistory ? (
+        <section className="space-y-3">
+          {historySections.map((section) => (
+            <div key={section.title} className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-medium text-ink">{section.title}</h3>
+                <span className="text-[11px] text-ink-faint">{section.rows.length} events</span>
               </div>
-            ))
-          )}
-        </div>
-        <p className="text-[11px] text-ink-faint leading-relaxed">
-          Receipts are emailed by Paddle after each charge. Invoice PDF downloads are not available in-app yet.
+              <div className="rounded-2xl hairline bg-surface/60 divide-y divide-hairline overflow-hidden">
+                {section.rows.map((row) => (
+                  <div key={row.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-ink truncate">{row.label}</p>
+                      <p className="text-xs text-ink-muted mt-0.5">
+                        {row.date ? formatBillingDate(row.date) : "—"}
+                        {row.plan !== "—" ? ` · ${row.plan}` : ""}
+                      </p>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${
+                        row.status.toLowerCase().includes("complete") || row.status === "Processed"
+                          ? "bg-success/15 text-success"
+                          : "bg-muted text-ink-muted"
+                      }`}
+                    >
+                      {row.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          <p className="text-[11px] text-ink-faint leading-relaxed">
+            Receipts are emailed by Paddle after each charge. Invoice PDF downloads are not available in-app yet.
+          </p>
+        </section>
+      ) : actions.uxState === "free" ? (
+        <p className="text-sm text-ink-muted rounded-xl hairline bg-surface/60 px-4 py-3">
+          No billing history yet. Upgrade to Pro to start your subscription.
         </p>
-      </section>
+      ) : null}
     </div>
   );
 }

@@ -180,23 +180,164 @@ export function buildPlanSubtitle(state: SubscriptionState): string {
   return parts.join(" · ");
 }
 
+/** Billing page lifecycle — drives CTA visibility on app.novasafe.io/account/billing */
+export type BillingUxState = "free" | "pro" | "cancelled_active" | "expired";
+
+export type BillingPageActions = {
+  uxState: BillingUxState;
+  showUpgrade: boolean;
+  upgradeLabel: string;
+  showManage: boolean;
+  showBillingPortal: boolean;
+  showResume: boolean;
+  planHeadline: string;
+  planSubline: string;
+};
+
+export function resolveBillingUxState(state: SubscriptionState): BillingUxState {
+  const hasCancellation =
+    state.subscriptionStatus === "cancelled" ||
+    Boolean(state.cancellationAt) ||
+    (state.subscriptionStatus === "active" && Boolean(state.cancellationAt));
+
+  if (state.isPro && state.isActive && hasCancellation) {
+    return "cancelled_active";
+  }
+
+  if (state.isPro && state.isActive) {
+    return "pro";
+  }
+
+  if (state.inGracePeriod || state.subscriptionStatus === "billing_issue") {
+    return "pro";
+  }
+
+  const hadSubscription =
+    state.subscriptionStatus === "expired" ||
+    state.subscriptionStatus === "cancelled" ||
+    Boolean(state.cancellationAt) ||
+    Boolean(state.purchasedAt) ||
+    Boolean(state.expiresAt);
+
+  if (!state.isPro && hadSubscription) {
+    return "expired";
+  }
+
+  return "free";
+}
+
+export function getBillingPageActions(
+  state: SubscriptionState,
+  purchases: PurchaseRecord[],
+): BillingPageActions {
+  const uxState = resolveBillingUxState(state);
+  const planLabel = formatPlanLabel(state);
+
+  switch (uxState) {
+    case "free":
+      return {
+        uxState,
+        showUpgrade: true,
+        upgradeLabel: "Upgrade to Pro",
+        showManage: false,
+        showBillingPortal: false,
+        showResume: false,
+        planHeadline: "NovaSafe Free",
+        planSubline: "Usage limits apply on the free plan",
+      };
+    case "pro":
+      return {
+        uxState,
+        showUpgrade: false,
+        upgradeLabel: "Upgrade to Pro",
+        showManage: true,
+        showBillingPortal: true,
+        showResume: false,
+        planHeadline: planLabel === "Free" ? "NovaSafe Pro" : `NovaSafe ${planLabel}`,
+        planSubline: "Active subscription",
+      };
+    case "cancelled_active":
+      return {
+        uxState,
+        showUpgrade: false,
+        upgradeLabel: "Upgrade to Pro",
+        showManage: true,
+        showBillingPortal: true,
+        showResume: true,
+        planHeadline: planLabel === "Free" ? "NovaSafe Pro" : `NovaSafe ${planLabel}`,
+        planSubline: "Cancelled — access continues until your billing period ends",
+      };
+    case "expired":
+      return {
+        uxState,
+        showUpgrade: true,
+        upgradeLabel: "Upgrade again",
+        showManage: purchases.length > 0,
+        showBillingPortal: purchases.length > 0,
+        showResume: false,
+        planHeadline: "Subscription expired",
+        planSubline: "You're on the free plan. Upgrade to restore Pro features.",
+      };
+  }
+}
+
 export function shouldShowUpgrade(state: SubscriptionState): boolean {
-  return !state.isPro && state.tier !== "pro";
+  return getBillingPageActions(state, []).showUpgrade;
 }
 
 export function shouldShowManageSubscription(
   state: SubscriptionState,
   purchases: PurchaseRecord[],
 ): boolean {
-  if (state.isPro || state.inGracePeriod) return true;
-  if (
-    state.subscriptionStatus === "cancelled" ||
-    state.subscriptionStatus === "billing_issue" ||
-    state.subscriptionStatus === "grace_period"
-  ) {
-    return true;
+  return getBillingPageActions(state, purchases).showManage;
+}
+
+export type BillingHistoryRow = ReturnType<typeof mergeBillingHistoryRows>[number];
+
+export function shouldShowBillingHistory(
+  uxState: BillingUxState,
+  rows: BillingHistoryRow[],
+): boolean {
+  if (uxState === "free") return false;
+  return rows.length > 0;
+}
+
+export function partitionBillingHistory(
+  rows: BillingHistoryRow[],
+  uxState: BillingUxState,
+): { title: string; rows: BillingHistoryRow[] }[] {
+  if (uxState === "free" || rows.length === 0) return [];
+
+  if (uxState === "expired") {
+    const past = rows
+      .filter((row) => !/renewal/i.test(row.label))
+      .slice(0, 8);
+    if (past.length === 0) return [];
+    return [{ title: "Past subscription", rows: past }];
   }
-  return purchases.length > 0;
+
+  const renewals = rows.filter((row) => /renewal/i.test(row.label));
+  const other = rows.filter((row) => !/renewal/i.test(row.label));
+
+  if (uxState === "pro" || uxState === "cancelled_active") {
+    const sections: { title: string; rows: BillingHistoryRow[] }[] = [];
+    if (renewals.length > 0) {
+      sections.push({ title: "Active subscription", rows: renewals.slice(0, 10) });
+    }
+    const remainder = [...other, ...renewals.slice(10)];
+    if (remainder.length > 0) {
+      sections.push({
+        title: renewals.length > 0 ? "Earlier activity" : "Billing history",
+        rows: remainder.slice(0, 8),
+      });
+    }
+    if (sections.length === 0) {
+      return [{ title: "Billing history", rows: rows.slice(0, 12) }];
+    }
+    return sections;
+  }
+
+  return [{ title: "Billing history", rows: rows.slice(0, 12) }];
 }
 
 export function formatProductLabel(productId: string | null): string {
