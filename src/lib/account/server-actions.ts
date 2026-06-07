@@ -10,16 +10,29 @@ function requireToken(): string {
   return token;
 }
 
+export const syncSubscriptionAfterUpgradeAction = createServerFn({ method: "POST" }).handler(async () => {
+  const token = requireToken();
+  const response = await subscriptionsApi.syncState(token);
+  return response.data;
+});
+
 export const loadMembershipAction = createServerFn({ method: "GET" }).handler(async () => {
   const token = requireToken();
-  const [membership, state] = await Promise.all([
-    subscriptionsApi.getMembership(token),
-    subscriptionsApi.getState(token),
-  ]);
-  return {
-    membership: membership.data,
-    state: state.data,
-  };
+  try {
+    const membership = await subscriptionsApi.getMembership(token);
+    return {
+      ok: true as const,
+      membership: membership.data,
+      state: membership.data.subscription,
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Couldn't load billing information right now.";
+    return {
+      ok: false as const,
+      message,
+    };
+  }
 });
 
 export const loadDevicesAction = createServerFn({ method: "GET" }).handler(async () => {

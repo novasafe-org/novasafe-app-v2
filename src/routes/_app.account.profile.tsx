@@ -1,5 +1,7 @@
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
+import { buildAppUrl, buildUpgradeUrl } from "@/config";
 import { loadAccountSettingsAction } from "@/lib/account/server-actions";
+import { formatPlanLabel, shouldShowUpgrade } from "@/lib/billing/subscription-display";
 
 const appRoute = getRouteApi("/_app");
 export const Route = createFileRoute("/_app/account/profile")({
@@ -9,6 +11,10 @@ export const Route = createFileRoute("/_app/account/profile")({
   component: function ProfilePage() {
     const { user } = appRoute.useRouteContext();
     const { settings, subscription } = Route.useLoaderData();
+    const upgradeUrl = buildUpgradeUrl({
+      next: buildAppUrl({ path: "/account/profile" }),
+      ref: "app_profile",
+    });
     const initials = (user.name || user.email || "NS")
       .split(" ")
       .map((part) => part[0] || "")
@@ -26,11 +32,20 @@ export const Route = createFileRoute("/_app/account/profile")({
           <div className="flex-1">
             <div className="text-base font-semibold">{user.name || "NovaSafe User"}</div>
             <div className="text-sm text-ink-muted">{user.email}</div>
-            <div className="mt-2 flex gap-2 text-xs">
+            <div className="mt-2 flex flex-wrap gap-2 text-xs items-center">
               <span className="px-2 py-0.5 rounded-md bg-accent text-brand-ink">
-                {subscription.isPro ? "Pro" : "Free"} plan
+                {formatPlanLabel(subscription)} plan
               </span>
               <span className="px-2 py-0.5 rounded-md bg-success/15 text-success">Verified</span>
+              {shouldShowUpgrade(subscription) && (
+                <button
+                  type="button"
+                  onClick={() => window.location.assign(upgradeUrl)}
+                  className="px-2 py-0.5 rounded-md bg-brand/10 text-brand hover:bg-brand/15 transition-colors"
+                >
+                  Upgrade to Pro
+                </button>
+              )}
             </div>
             <div className="mt-3 text-xs text-ink-muted">
               2FA: {settings.twoFactorEnabled ? "Enabled" : "Disabled"} · Cloud sync:{" "}

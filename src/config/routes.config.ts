@@ -50,6 +50,16 @@ export function buildSignupProUrl(options?: Omit<BuildOptions, "path">): string 
   return buildAuthUrlAt(AUTH_PATH.SignupPro, options);
 }
 
+/** Authenticated upgrade screen on the auth project (existing free users). */
+export function buildUpgradeUrl(options?: Omit<BuildOptions, "path">): string {
+  return buildAuthUrlAt(AUTH_PATH.Upgrade, options);
+}
+
+/** RevenueCat customer portal on the auth project (subscription management). */
+export function buildManageBillingUrl(options?: Omit<BuildOptions, "path">): string {
+  return buildAuthUrlAt(AUTH_PATH.BillingManage, options);
+}
+
 export function buildAppUrl(options?: BuildOptions): string {
   const url = new URL(appConfig.urls.app);
   applyOptions(url, options);
@@ -72,6 +82,8 @@ export const ROUTES = Object.freeze({
   buildLoginUrl,
   buildSignupUrl,
   buildSignupProUrl,
+  buildUpgradeUrl,
+  buildManageBillingUrl,
   buildAppUrl,
   buildLandingUrl,
   buildLoginRedirectFor,

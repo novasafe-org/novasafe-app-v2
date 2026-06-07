@@ -64,6 +64,26 @@ export interface SubscriptionEnvelope<T> {
   data: T;
 }
 
+export interface PurchaseHistoryRecord {
+  eventId: string;
+  eventType: string;
+  productId: string | null;
+  transactionId: string | null;
+  store: string | null;
+  environment: string | null;
+  purchasedAt: string | null;
+}
+
+export interface MembershipOverview {
+  subscription: SubscriptionState;
+  recentActivity: Array<{
+    eventType: string;
+    processedAt: string | null;
+    status?: string;
+  }>;
+  purchases: PurchaseHistoryRecord[];
+}
+
 export const subscriptionsApi = {
   getState(token: string, options: { forceRefresh?: boolean } = {}) {
     return apiFetch<SubscriptionEnvelope<SubscriptionState>>(`${PREFIX}/state`, {
@@ -82,16 +102,14 @@ export const subscriptionsApi = {
   },
 
   getMembership(token: string) {
-    return apiFetch<
-      SubscriptionEnvelope<{
-        subscription: SubscriptionState;
-        recentActivity: Array<{
-          eventType: string;
-          processedAt: string | null;
-          status?: string;
-        }>;
-      }>
-    >(`${PREFIX}/membership`, {
+    return apiFetch<SubscriptionEnvelope<MembershipOverview>>(`${PREFIX}/membership`, {
+      method: "GET",
+      token,
+    });
+  },
+
+  getPurchases(token: string) {
+    return apiFetch<SubscriptionEnvelope<{ purchases: PurchaseHistoryRecord[] }>>(`${PREFIX}/purchases`, {
       method: "GET",
       token,
     });
