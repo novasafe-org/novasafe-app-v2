@@ -11,6 +11,7 @@ export {
   buildLoginUrl,
   buildSignupUrl,
   buildSignupProUrl,
+  buildProUrl,
   buildUpgradeUrl,
   buildManageBillingUrl,
   buildAppUrl,

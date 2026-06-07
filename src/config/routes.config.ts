@@ -50,9 +50,14 @@ export function buildSignupProUrl(options?: Omit<BuildOptions, "path">): string 
   return buildAuthUrlAt(AUTH_PATH.SignupPro, options);
 }
 
-/** Authenticated upgrade screen on the auth project (existing free users). */
+/** Authenticated Pro checkout on the auth project. */
+export function buildProUrl(options?: Omit<BuildOptions, "path">): string {
+  return buildAuthUrlAt(AUTH_PATH.Pro, options);
+}
+
+/** @deprecated Use `buildProUrl`. */
 export function buildUpgradeUrl(options?: Omit<BuildOptions, "path">): string {
-  return buildAuthUrlAt(AUTH_PATH.Upgrade, options);
+  return buildProUrl(options);
 }
 
 /** RevenueCat customer portal on the auth project (subscription management). */
@@ -82,6 +87,7 @@ export const ROUTES = Object.freeze({
   buildLoginUrl,
   buildSignupUrl,
   buildSignupProUrl,
+  buildProUrl,
   buildUpgradeUrl,
   buildManageBillingUrl,
   buildAppUrl,

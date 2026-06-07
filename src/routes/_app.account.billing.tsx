@@ -13,6 +13,7 @@ import { normalizeSubscriptionState } from "@/lib/billing/subscription-display";
 const billingSearchSchema = z.object({
   upgraded: z.enum(["1"]).optional().catch(undefined),
   billingSynced: z.enum(["1"]).optional().catch(undefined),
+  portalError: z.enum(["1"]).optional().catch(undefined),
 });
 
 export const Route = createFileRoute("/_app/account/billing")({
@@ -22,12 +23,27 @@ export const Route = createFileRoute("/_app/account/billing")({
   loader: async () => loadMembershipAction(),
   component: function Billing() {
     const loaderData = Route.useLoaderData();
-    const { upgraded, billingSynced } = Route.useSearch();
+    const { upgraded, billingSynced, portalError } = Route.useSearch();
     const router = useRouter();
     const refreshedRef = useRef(false);
+    const portalToastRef = useRef(false);
     const billingReturnUrl = buildAppUrl({ path: "/account/billing" });
     const upgradeUrl = buildUpgradeUrl({ next: billingReturnUrl, ref: "app_billing" });
     const manageUrl = buildManageBillingUrl({ next: billingReturnUrl, ref: "app_billing_manage" });
+
+    useEffect(() => {
+      if (portalError === "1" && !portalToastRef.current) {
+        portalToastRef.current = true;
+        toast.error("Subscription management is not available.", {
+          description: "Please contact support at support@novasafe.app.",
+        });
+        if (typeof window !== "undefined") {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("portalError");
+          window.history.replaceState({}, "", url.toString());
+        }
+      }
+    }, [portalError]);
 
     useEffect(() => {
       const shouldSync = upgraded === "1" || billingSynced === "1";

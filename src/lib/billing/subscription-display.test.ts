@@ -91,6 +91,10 @@ describe("billing UX states", () => {
     const actions = getBillingPageActions(expired, []);
     expect(actions.upgradeLabel).toBe("Upgrade again");
     expect(actions.showManage).toBe(false);
+    expect(actions.showBillingPortal).toBe(false);
+    const withHistory = getBillingPageActions(expired, [{ eventId: "1" } as never]);
+    expect(withHistory.showManage).toBe(false);
+    expect(withHistory.showBillingPortal).toBe(false);
   });
 
   it("hides history for free users", () => {

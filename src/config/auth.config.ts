@@ -11,6 +11,7 @@ export const AUTH_PATH = {
   Login: "/login",
   Signup: "/signup",
   SignupPro: "/signup/pro",
+  Pro: "/pro",
   Upgrade: "/upgrade",
   BillingManage: "/billing/manage",
 } as const;
