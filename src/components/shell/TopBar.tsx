@@ -1,4 +1,5 @@
-import { Search, Plus, Wifi, Bell } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Search, Plus, Wifi, Bell, Settings, Sun, Moon } from "lucide-react";
 import { useVault } from "@/lib/vault-store";
 import { UserMenu } from "./UserMenu";
 
@@ -12,6 +13,8 @@ export function TopBar({
   onNew: () => void;
 }) {
   const sync = useVault((s) => s.notificationsEnabled);
+  const theme = useVault((s) => s.theme);
+  const setTheme = useVault((s) => s.setTheme);
   return (
     <header className="h-14 px-4 flex items-center gap-3 border-b border-hairline bg-surface/60">
       <div className="flex-1 max-w-2xl mx-auto w-full">
@@ -33,6 +36,24 @@ export function TopBar({
         <span>Synced</span>
       </div>
       <button
+        type="button"
+        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+        className="size-9 rounded-lg grid place-items-center text-ink-muted hover:text-ink hover:bg-muted transition"
+        title="Toggle theme"
+        aria-label="Toggle theme"
+      >
+        {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+      </button>
+      <Link
+        to="/account/profile"
+        className="size-9 rounded-lg grid place-items-center text-ink-muted hover:text-ink hover:bg-muted transition"
+        title="Settings"
+        aria-label="Settings"
+      >
+        <Settings className="size-4" />
+      </Link>
+      <button
+        type="button"
         className="size-9 rounded-lg grid place-items-center text-ink-muted hover:text-ink hover:bg-muted transition relative"
         aria-label="Notifications"
       >

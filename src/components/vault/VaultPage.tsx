@@ -13,6 +13,7 @@ import {
   Files,
   Globe,
   Pencil,
+  Check,
 } from "lucide-react";
 import { useVault } from "@/lib/vault-store";
 import { useUI } from "@/lib/ui-store";
@@ -38,6 +39,12 @@ import {
   PasswordHistorySection,
 } from "@/components/vault/item-sections";
 import type { CustomField } from "@/lib/vault-types";
+import { ItemFavicon } from "@/components/vault/ItemFavicon";
+import {
+  formatRelativeAgo,
+  formatVaultDate,
+  groupVaultItemsByMonth,
+} from "@/lib/vault-dates";
 
 const VAULT_ITEMS_QUERY_KEY = ["vault", "items"] as const;
 
@@ -114,7 +121,7 @@ export function VaultPage({ filter }: { filter?: (it: VaultItem) => boolean }) {
     );
   }, [items, query, filter]);
 
-  const selected = list.find((i) => i.id === selectedId) ?? list[0] ?? null;
+  const selected = selectedId ? (list.find((i) => i.id === selectedId) ?? null) : null;
   const loadingInitialData = !itemsQuery.data && itemsQuery.isFetching;
 
   if (loadingInitialData) {
@@ -125,7 +132,7 @@ export function VaultPage({ filter }: { filter?: (it: VaultItem) => boolean }) {
     <div className="h-full min-h-0 flex min-w-0">
       <ItemList
         items={list}
-        selectedId={selected?.id ?? null}
+        selectedId={selectedId}
         onSelect={(id) => setSelected(id)}
         onToggleFavorite={async (item) => {
           const next = !item.favorite;
@@ -222,6 +229,8 @@ function ItemList({
   onSelect: (id: string) => void;
   onToggleFavorite: (item: VaultItem) => void;
 }) {
+  const monthGroups = groupVaultItemsByMonth(items);
+
   return (
     <div className="w-full md:w-[360px] shrink-0 flex flex-col min-h-0">
       <div className="px-4 py-3 flex items-center justify-between">
@@ -236,61 +245,66 @@ function ItemList({
         {items.length === 0 && (
           <div className="text-center py-12 text-sm text-ink-muted">No items match</div>
         )}
-        <ul className="space-y-1">
-          {items.map((it) => {
-            const M = TYPE_META[it.type];
-            const Icon = M.icon;
-            const active = it.id === selectedId;
-            return (
-              <li key={it.id}>
-                <button
-                  onClick={() => onSelect(it.id)}
-                  className={cn(
-                    "w-full text-left flex items-center gap-3 px-2.5 py-2.5 rounded-xl transition relative",
-                    active ? "bg-accent" : "hover:bg-muted/70",
-                  )}
-                >
-                  {active && (
-                    <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r bg-brand" />
-                  )}
-                  <span
-                    className={cn("size-9 rounded-lg grid place-items-center shrink-0", M.tint)}
-                  >
-                    <Icon className="size-4" />
-                  </span>
-                  <span className="flex-1 min-w-0">
-                    <span className="flex items-center gap-1.5">
-                      <span className="text-sm font-medium truncate">{it.title}</span>
-                      {it.breached && (
-                        <span
-                          className="size-1.5 rounded-full bg-destructive"
-                          title="Breach detected"
-                        />
-                      )}
-                    </span>
-                    <span className="text-xs text-ink-muted truncate block">
-                      {it.username || it.domain || it.vault}
-                    </span>
-                  </span>
-                  <span className="flex items-center gap-2 text-[11px] text-ink-faint">
-                    <span>{timeAgo(it.updatedAt)}</span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onToggleFavorite(it);
-                      }}
-                      className="hover:text-warning"
-                      aria-label="Favorite"
-                    >
-                      <Star
-                        className={cn("size-3.5", it.favorite ? "fill-warning text-warning" : "")}
-                      />
-                    </button>
-                  </span>
-                </button>
-              </li>
-            );
-          })}
+        <ul className="space-y-3">
+          {monthGroups.map((group) => (
+            <li key={group.key}>
+              <div className="px-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
+                {group.label}
+              </div>
+              <ul className="space-y-1">
+                {group.items.map((it) => {
+                  const active = it.id === selectedId;
+                  return (
+                    <li key={it.id}>
+                      <button
+                        onClick={() => onSelect(it.id)}
+                        className={cn(
+                          "w-full text-left flex items-center gap-3 px-2.5 py-2.5 rounded-xl transition relative",
+                          active ? "bg-accent" : "hover:bg-muted/70",
+                        )}
+                      >
+                        {active && (
+                          <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r bg-brand" />
+                        )}
+                        <ItemFavicon item={it} size={36} />
+                        <span className="flex-1 min-w-0">
+                          <span className="flex items-center gap-1.5">
+                            <span className="text-sm font-medium truncate">{it.title}</span>
+                            {it.breached && (
+                              <span
+                                className="size-1.5 rounded-full bg-destructive"
+                                title="Breach detected"
+                              />
+                            )}
+                          </span>
+                          <span className="text-xs text-ink-muted truncate block">
+                            {it.username || it.domain || it.vault}
+                          </span>
+                        </span>
+                        <span className="flex items-center gap-2 text-[11px] text-ink-faint">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onToggleFavorite(it);
+                            }}
+                            className="hover:text-warning"
+                            aria-label="Favorite"
+                          >
+                            <Star
+                              className={cn(
+                                "size-3.5",
+                                it.favorite ? "fill-warning text-warning" : "",
+                              )}
+                            />
+                          </button>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </li>
+          ))}
         </ul>
       </div>
     </div>
@@ -328,16 +342,19 @@ function Inspector({
   const [revealPassword, setRevealPassword] = useState(false);
   const [customFieldsDraft, setCustomFieldsDraft] = useState<CustomField[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const displayLastOpenedRef = useRef(item.lastOpenedAt);
+  const [displayLastOpenedAt, setDisplayLastOpenedAt] = useState(item.lastOpenedAt);
   const updateItem = useVault((s) => s.updateItem);
   const openShare = useUI((s) => s.openShare);
   const M = TYPE_META[item.type];
-  const Icon = M.icon;
   const str = strength(item.password);
 
   useEffect(() => {
     setEditing(false);
     setRevealPassword(false);
     setCustomFieldsDraft([]);
+    displayLastOpenedRef.current = item.lastOpenedAt;
+    setDisplayLastOpenedAt(item.lastOpenedAt);
   }, [item.id]);
 
   useEffect(() => {
@@ -345,7 +362,10 @@ function Inspector({
     setLoadingDetails(true);
     getVaultItemAction({ data: { id: item.id, revealSensitive: true } })
       .then((result) => {
-        if (!cancelled) onUpsert(result.item);
+        if (!cancelled) {
+          const pinnedLastOpened = displayLastOpenedRef.current;
+          onUpsert({ ...result.item, lastOpenedAt: pinnedLastOpened });
+        }
       })
       .catch((err) => {
         if (!cancelled) console.error("[Inspector] failed loading item details", err);
@@ -419,9 +439,7 @@ function Inspector({
   return (
     <div className="h-full min-h-0 flex flex-col">
       <div className="shrink-0 px-4 md:px-6 pt-6 pb-4 flex items-start gap-4 border-b border-hairline">
-        <div className={cn("size-14 rounded-2xl grid place-items-center shrink-0", M.tint)}>
-          <Icon className="size-6" />
-        </div>
+        <ItemFavicon item={item} size={56} className="rounded-2xl" iconClassName="size-6" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             {editing ? (
@@ -444,7 +462,7 @@ function Inspector({
               title={editing ? "Done editing" : "Edit item"}
               aria-pressed={editing}
             >
-              <Pencil className="size-4" />
+              {editing ? <Check className="size-4" /> : <Pencil className="size-4" />}
             </button>
             <button
               type="button"
@@ -671,9 +689,9 @@ function Inspector({
 
           <Section title="Metadata">
             <div className="grid grid-cols-2 gap-3 text-xs">
-              <Meta k="Created" v={new Date(item.createdAt).toLocaleDateString()} />
-              <Meta k="Modified" v={new Date(item.updatedAt).toLocaleDateString()} />
-              <Meta k="Last opened" v={timeAgo(item.lastOpenedAt) + " ago"} />
+              <Meta k="Created" v={formatVaultDate(item.createdAt)} />
+              <Meta k="Modified" v={formatVaultDate(item.updatedAt)} />
+              <Meta k="Last opened" v={formatRelativeAgo(displayLastOpenedAt)} />
               <Meta k="Vault" v={item.vault} />
             </div>
           </Section>

@@ -10,12 +10,12 @@ import {
   type CustomFieldPayload,
 } from "@/lib/api";
 import type { CustomField, ItemType, VaultItem } from "@/lib/vault-types";
+import { toOptionalTimestamp } from "@/lib/vault-dates";
 import { readSessionToken } from "@/lib/auth/session.server";
 
 function toTs(value: string | Date | null | undefined): number {
-  if (!value) return Date.now();
-  const parsed = new Date(value).getTime();
-  return Number.isFinite(parsed) ? parsed : Date.now();
+  const parsed = toOptionalTimestamp(value);
+  return parsed || Date.now();
 }
 
 function toItemType(raw: string | undefined): ItemType {
@@ -82,7 +82,7 @@ export function mapCoreItem(item: CoreVaultItem): VaultItem {
     vault: "Personal",
     createdAt: toTs(item.createdAt),
     updatedAt: toTs(item.updatedAt),
-    lastOpenedAt: toTs(item.lastAccessedAt),
+    lastOpenedAt: toOptionalTimestamp(item.lastAccessedAt),
     history: mapCorePasswordVersions(item.password_versions),
     customFields: Array.isArray(item.custom_fields)
       ? item.custom_fields.map(mapCoreCustomField)

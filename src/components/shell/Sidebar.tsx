@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Shield,
@@ -9,13 +8,8 @@ import {
   Share2,
   Star,
   Archive,
-  Settings,
-  Sun,
-  Moon,
   // Plus,
 } from "lucide-react";
-import { useVault } from "@/lib/vault-store";
-import { getClientSession, subscribeToClientSession, type ClientSession } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -35,12 +29,7 @@ const BRAND_ICON_URL = "/brand-icon.png";
 
 export function Sidebar({ onNew }: { onNew?: () => void }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
-  const theme = useVault((s) => s.theme);
-  const setTheme = useVault((s) => s.setTheme);
-  const session = useClientSession();
   const isActive = (to: string) => path === to || (to === "/vault" && path === "/");
-  const initials = session ? deriveInitials(session.user.name, session.user.email) : "··";
-  const fullName = session?.user.name || session?.user.email || "Account";
 
   return (
     <aside className="hidden md:flex w-[68px] shrink-0 flex-col items-center py-4 gap-2 border-r border-hairline bg-surface/60">
@@ -89,49 +78,6 @@ export function Sidebar({ onNew }: { onNew?: () => void }) {
           );
         })}
       </div>
-
-      <div className="mt-auto flex flex-col items-center gap-1">
-        <button
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="size-10 rounded-xl grid place-items-center text-ink-muted hover:text-ink hover:bg-muted transition"
-          title="Toggle theme"
-        >
-          {theme === "dark" ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
-        </button>
-        {/* <Link
-          to="/account/profile"
-          className={cn(
-            "size-10 rounded-xl grid place-items-center transition",
-            path.startsWith("/account")
-              ? "bg-accent text-brand-ink"
-              : "text-ink-muted hover:text-ink hover:bg-muted",
-          )}
-          title="Account"
-        >
-          <Settings className="size-[18px]" />
-        </Link> */}
-        {/* <Link
-          to="/account/profile"
-          className="size-9 rounded-full brand-gradient grid place-items-center text-white text-xs font-semibold mt-1"
-          title={fullName}
-        >
-          {initials}
-        </Link> */}
-      </div>
     </aside>
   );
-}
-
-function useClientSession(): ClientSession | null {
-  const [session, setSession] = useState<ClientSession | null>(() => getClientSession());
-  useEffect(() => subscribeToClientSession(setSession), []);
-  return session;
-}
-
-function deriveInitials(name: string | undefined, email: string): string {
-  const source = (name && name.trim()) || email.split("@")[0] || "?";
-  const tokens = source.split(/[\s._-]+/).filter(Boolean);
-  if (tokens.length === 0) return source.slice(0, 2).toUpperCase();
-  if (tokens.length === 1) return tokens[0].slice(0, 2).toUpperCase();
-  return (tokens[0][0] + tokens[tokens.length - 1][0]).toUpperCase();
 }

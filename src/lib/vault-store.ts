@@ -114,7 +114,7 @@ export const useVault = create<State & Actions>()(
       replaceItems: (items) =>
         set((s) => ({
           items,
-          selectedId: items.some((it) => it.id === s.selectedId) ? s.selectedId : (items[0]?.id ?? null),
+          selectedId: items.some((it) => it.id === s.selectedId) ? s.selectedId : null,
         })),
       upsertItem: (item) =>
         set((s) => {
