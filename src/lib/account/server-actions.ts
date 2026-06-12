@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+import { buildAuditEvents } from "@/lib/account/audit";
 import { dashboardApi, settingsApi, subscriptionsApi, type DashboardSecuritySummary } from "@/lib/api";
 import { readSessionToken } from "@/lib/auth/session.server";
 import { normalizeSubscriptionState } from "@/lib/billing/subscription-display";
@@ -17,27 +18,66 @@ export const syncSubscriptionAfterUpgradeAction = createServerFn({ method: "POST
   return response.data;
 });
 
-export const loadMembershipAction = createServerFn({ method: "GET" }).handler(async () => {
-  const token = requireToken();
-  try {
-    const membership = await subscriptionsApi.getMembership(token);
-    const data = membership.data;
-    if (!data?.subscription) {
-      return {
-        ok: false as const,
-        message: "Billing data was incomplete. Please try again.",
-      };
-    }
-    const normalized = {
-      ...data,
-      purchases: data.purchases ?? [],
-      recentActivity: data.recentActivity ?? [],
-      subscription: normalizeSubscriptionState(data.subscription),
+async function fetchMembershipData(token: string) {
+  const membership = await subscriptionsApi.getMembership(token);
+  const data = membership.data;
+  if (!data?.subscription) {
+    return {
+      ok: false as const,
+      message: "Billing data was incomplete. Please try again.",
     };
+  }
+  const normalized = {
+    ...data,
+    purchases: data.purchases ?? [],
+    recentActivity: data.recentActivity ?? [],
+    subscription: normalizeSubscriptionState(data.subscription),
+  };
+  return {
+    ok: true as const,
+    membership: normalized,
+    state: normalized.subscription,
+  };
+}
+
+export const loadMembershipAction = createServerFn({ method: "GET" }).handler(async () => {
+  try {
+    return await fetchMembershipData(requireToken());
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Couldn't load billing information right now.";
+    return {
+      ok: false as const,
+      message,
+    };
+  }
+});
+
+export const loadBillingCenterAction = createServerFn({ method: "GET" }).handler(async () => {
+  try {
+    const token = requireToken();
+    const [membershipResult, overviewRes, sessionsRes] = await Promise.all([
+      fetchMembershipData(token),
+      dashboardApi.getOverview(token),
+      settingsApi.getSessions(token),
+    ]);
+
+    if (!membershipResult.ok) {
+      return membershipResult;
+    }
+
+    const sessions = sessionsRes.sessions || [];
     return {
       ok: true as const,
-      membership: normalized,
-      state: normalized.subscription,
+      membership: membershipResult.membership,
+      state: membershipResult.state,
+      usage: {
+        totalItems: overviewRes.data.totalItems,
+        deviceCount: sessions.length,
+        trustedDevices:
+          sessionsRes.securityOverview?.trustedDevices ??
+          sessions.filter((s) => s.trustState === "trusted" || s.isCurrent).length,
+      },
     };
   } catch (error) {
     const message =
@@ -272,15 +312,50 @@ export const createExportAction = createServerFn({ method: "POST" }).handler(asy
 });
 
 export const loadRecoveryAction = createServerFn({ method: "GET" }).handler(async () => {
-  const token = requireToken();
-  const [summary, history] = await Promise.all([
-    settingsApi.getAccountSummary(token),
-    settingsApi.getExportHistory(token),
-  ]);
+  const data = await fetchRecoveryCenterData(requireToken());
   return {
-    summary: summary.summary,
-    history: history.history,
+    summary: data.summary,
+    history: data.exportHistory,
   };
+});
+
+async function fetchRecoveryCenterData(token: string) {
+  const [summaryRes, exportRes, settingsRes, sessionsRes] = await Promise.all([
+    settingsApi.getAccountSummary(token),
+    settingsApi.getExportHistory(token).catch(() => ({
+      history: [] as Array<{
+        id: string;
+        format: string;
+        status: string;
+        itemCount: number;
+        fileName: string;
+        createdAt?: string;
+      }>,
+    })),
+    settingsApi.getSettings(token),
+    settingsApi.getSessions(token),
+  ]);
+
+  const sessions = sessionsRes.sessions || [];
+  const exportHistory = exportRes.history || [];
+  const settings = settingsRes.settings;
+  const overview = sessionsRes.securityOverview;
+
+  const trustedDevices =
+    overview?.trustedDevices ?? sessions.filter((s) => s.trustState === "trusted" || s.isCurrent).length;
+
+  return {
+    summary: summaryRes.summary,
+    exportHistory,
+    settings,
+    sessions,
+    trustedDevices,
+    activeSessions: overview?.activeSessions ?? sessions.length,
+  };
+}
+
+export const loadRecoveryCenterAction = createServerFn({ method: "GET" }).handler(async () => {
+  return fetchRecoveryCenterData(requireToken());
 });
 
 export const deleteAccountAction = createServerFn({ method: "POST" }).handler(async () => {
@@ -356,51 +431,50 @@ export const loadProfileDashboardAction = createServerFn({ method: "GET" }).hand
   };
 });
 
-export const loadActivityAction = createServerFn({ method: "GET" }).handler(async () => {
-  const token = requireToken();
-  const [membership, overview, sessions] = await Promise.all([
+async function fetchAuditCenterData(token: string) {
+  const [membership, overview, sessionsRes, settingsRes, exportRes] = await Promise.all([
     subscriptionsApi.getMembership(token),
     dashboardApi.getOverview(token),
     settingsApi.getSessions(token),
+    settingsApi.getSettings(token),
+    settingsApi.getExportHistory(token).catch(() => ({
+      history: [] as Array<{ id: string; createdAt?: string; fileName?: string }>,
+    })),
   ]);
 
-  const events: Array<{
-    id: string;
-    kind: "security" | "login" | "item" | "share";
-    message: string;
-    at: number;
-  }> = [];
+  const settings = settingsRes.settings;
+  const events = buildAuditEvents({
+    sessions: sessionsRes.sessions || [],
+    overview: overview.data,
+    billingActivity: membership.data.recentActivity || [],
+    exportHistory: exportRes.history || [],
+    settings,
+  });
 
-  for (const entry of membership.data.recentActivity || []) {
-    const ts = entry.processedAt ? new Date(entry.processedAt).getTime() : Date.now();
-    events.push({
-      id: `billing-${entry.eventType}-${ts}`,
-      kind: "security",
-      message: `Billing event: ${entry.eventType.replaceAll("_", " ")}`,
-      at: ts,
-    });
-  }
+  return {
+    events,
+    sessions: sessionsRes.sessions || [],
+    settings,
+    securityOverview: sessionsRes.securityOverview,
+  };
+}
 
-  for (const item of overview.data.recentlyUsed || []) {
-    const ts = item.updatedAt ? new Date(item.updatedAt).getTime() : Date.now();
-    events.push({
-      id: `item-${item.id}-${ts}`,
-      kind: "item",
-      message: `Vault item updated: ${item.title || "Untitled item"}`,
-      at: ts,
-    });
-  }
+export const loadActivityAction = createServerFn({ method: "GET" }).handler(async () => {
+  const data = await fetchAuditCenterData(requireToken());
+  const activity = data.events.slice(0, 50).map((e) => ({
+    id: e.id,
+    kind:
+      e.category === "login" || e.category === "devices"
+        ? ("login" as const)
+        : e.category === "vault"
+          ? ("item" as const)
+          : ("security" as const),
+    message: e.description,
+    at: e.at,
+  }));
+  return { activity };
+});
 
-  for (const session of sessions.sessions || []) {
-    const ts = session.lastActivity ? new Date(session.lastActivity).getTime() : Date.now();
-    events.push({
-      id: `session-${session.id}-${ts}`,
-      kind: "login",
-      message: `Session activity: ${session.parsedDevice?.displayName || "Unknown device"}`,
-      at: ts,
-    });
-  }
-
-  events.sort((a, b) => b.at - a.at);
-  return { activity: events.slice(0, 50) };
+export const loadAuditCenterAction = createServerFn({ method: "GET" }).handler(async () => {
+  return fetchAuditCenterData(requireToken());
 });

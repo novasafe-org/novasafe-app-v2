@@ -2,10 +2,10 @@ import { useEffect, useRef } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { z } from "zod";
-import { BillingPageView } from "@/components/billing/BillingPageView";
+import { MembershipCenter } from "@/components/billing/MembershipCenter";
 import { buildAppUrl, buildManageBillingUrl, buildUpgradeUrl } from "@/config";
 import {
-  loadMembershipAction,
+  loadBillingCenterAction,
   syncSubscriptionAfterUpgradeAction,
 } from "@/lib/account/server-actions";
 import { normalizeSubscriptionState } from "@/lib/billing/subscription-display";
@@ -20,8 +20,8 @@ export const Route = createFileRoute("/_app/account/billing")({
   head: () => ({ meta: [{ title: "Billing — NovaSafe" }] }),
   validateSearch: (search) => billingSearchSchema.parse(search),
   staleTime: 60_000,
-  loader: async () => loadMembershipAction(),
-  component: function Billing() {
+  loader: async () => loadBillingCenterAction(),
+  component: function BillingRoute() {
     const loaderData = Route.useLoaderData();
     const { upgraded, billingSynced, portalError } = Route.useSearch();
     const router = useRouter();
@@ -75,7 +75,7 @@ export const Route = createFileRoute("/_app/account/billing")({
 
     if (!loaderData.ok) {
       return (
-        <BillingPageView
+        <MembershipCenter
           state={normalizeSubscriptionState(null)}
           purchases={[]}
           recentActivity={[]}
@@ -87,16 +87,16 @@ export const Route = createFileRoute("/_app/account/billing")({
       );
     }
 
-    const { membership, state } = loaderData;
-    const purchases = membership.purchases ?? [];
+    const { membership, state, usage } = loaderData;
 
     return (
-      <BillingPageView
+      <MembershipCenter
         state={state}
-        purchases={purchases}
+        purchases={membership.purchases ?? []}
         recentActivity={membership.recentActivity ?? []}
         upgradeUrl={upgradeUrl}
         manageUrl={manageUrl}
+        usage={usage}
       />
     );
   },
