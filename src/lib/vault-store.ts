@@ -23,7 +23,7 @@ import {
   seedInvoices,
 } from "./dummy-data";
 
-export type Theme = "light" | "dark";
+export type Theme = "light" | "dark" | "system";
 export type Density = "comfortable" | "compact";
 
 interface State {

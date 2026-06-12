@@ -1,5 +1,5 @@
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
-import { ProfileDashboard } from "@/components/account/profile/ProfileDashboard";
+import { ProfileSettings } from "@/components/account/simple/ProfileSettings";
 import { loadProfileDashboardAction } from "@/lib/account/server-actions";
 
 const appRoute = getRouteApi("/_app");
@@ -11,6 +11,6 @@ export const Route = createFileRoute("/_app/account/profile")({
   component: function ProfilePage() {
     const { user } = appRoute.useRouteContext();
     const data = Route.useLoaderData();
-    return <ProfileDashboard user={user} data={data} />;
+    return <ProfileSettings user={user} data={data} />;
   },
 });

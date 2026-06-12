@@ -15,7 +15,18 @@ export function AppShell() {
   useSessionTimeout();
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
+    const apply = () => {
+      const dark =
+        theme === "dark" ||
+        (theme === "system" &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches);
+      document.documentElement.classList.toggle("dark", dark);
+    };
+    apply();
+    if (theme !== "system") return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
   }, [theme]);
 
   useEffect(() => {

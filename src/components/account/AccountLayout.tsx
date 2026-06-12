@@ -1,5 +1,5 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { User, Shield, Smartphone, Activity, KeyRound, CreditCard, Palette } from "lucide-react";
+import { User, Shield, Smartphone, Activity, KeyRound, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -9,7 +9,6 @@ const NAV = [
   { to: "/account/activity", label: "Activity", icon: Activity },
   { to: "/account/recovery", label: "Recovery", icon: KeyRound },
   { to: "/account/billing", label: "Billing", icon: CreditCard },
-  { to: "/account/appearance", label: "Appearance", icon: Palette },
 ] as const;
 
 export function AccountLayout() {

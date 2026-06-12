@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AuditCenter } from "@/components/account/audit/AuditCenter";
-import { loadAuditCenterAction } from "@/lib/account/server-actions";
+import { ActivitySettings } from "@/components/account/simple/ActivitySettings";
+import { loadActivityAction } from "@/lib/account/server-actions";
 
 export const Route = createFileRoute("/_app/account/activity")({
   head: () => ({ meta: [{ title: "Activity — NovaSafe" }] }),
   staleTime: 60_000,
-  loader: async () => loadAuditCenterAction(),
+  loader: async () => loadActivityAction(),
   component: function ActivityRoute() {
     const data = Route.useLoaderData();
-    return <AuditCenter data={data} />;
+    return <ActivitySettings data={data} />;
   },
 });

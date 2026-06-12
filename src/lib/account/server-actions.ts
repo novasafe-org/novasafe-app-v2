@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { buildAuditEvents } from "@/lib/account/audit";
-import { dashboardApi, settingsApi, subscriptionsApi, type DashboardSecuritySummary } from "@/lib/api";
+import { dashboardApi, settingsApi, subscriptionsApi } from "@/lib/api";
 import { readSessionToken } from "@/lib/auth/session.server";
 import { normalizeSubscriptionState } from "@/lib/billing/subscription-display";
 
@@ -159,7 +159,6 @@ export const loadAccountSettingsAction = createServerFn({ method: "GET" }).handl
 
 export const loadSecurityAction = createServerFn({ method: "GET" }).handler(
   async (): Promise<{
-    security: DashboardSecuritySummary;
     settings: {
       twoFactorEnabled: boolean;
       cloudSyncEnabled: boolean;
@@ -169,15 +168,17 @@ export const loadSecurityAction = createServerFn({ method: "GET" }).handler(
       canSetLoginPassword: boolean;
       updatedAt: string | null;
     };
+    activeSessions: number;
   }> => {
     const token = requireToken();
-    const [settings, security] = await Promise.all([
+    const [settings, sessions] = await Promise.all([
       settingsApi.getSettings(token),
-      dashboardApi.getSecuritySummary(token),
+      settingsApi.getSessions(token),
     ]);
+    const list = sessions.sessions || [];
     return {
-      security: security.data,
       settings: settings.settings,
+      activeSessions: sessions.count ?? list.length,
     };
   },
 );
@@ -468,9 +469,13 @@ export const loadActivityAction = createServerFn({ method: "GET" }).handler(asyn
         ? ("login" as const)
         : e.category === "vault"
           ? ("item" as const)
-          : ("security" as const),
-    message: e.description,
+          : e.category === "billing" || e.category === "subscription"
+            ? ("billing" as const)
+            : ("account" as const),
+    message: e.title || e.description,
     at: e.at,
+    device: e.deviceName,
+    location: e.location,
   }));
   return { activity };
 });

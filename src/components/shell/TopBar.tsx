@@ -16,6 +16,16 @@ export function TopBar({
 }) {
   const theme = useVault((s) => s.theme);
   const setTheme = useVault((s) => s.setTheme);
+
+  function effectiveDark(): boolean {
+    if (theme === "dark") return true;
+    if (theme === "light") return false;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+
+  function toggleTheme() {
+    setTheme(effectiveDark() ? "light" : "dark");
+  }
   return (
     <header className="h-14 px-4 flex items-center gap-3 border-b border-hairline bg-surface/60">
       <div
@@ -40,12 +50,12 @@ export function TopBar({
       <div className="ml-auto flex items-center gap-1.5 shrink-0">
         <button
           type="button"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          onClick={toggleTheme}
           className="size-9 rounded-lg grid place-items-center text-ink-muted hover:text-ink hover:bg-muted transition"
           title="Toggle theme"
           aria-label="Toggle theme"
         >
-          {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          {effectiveDark() ? <Sun className="size-4" /> : <Moon className="size-4" />}
         </button>
         <button
           type="button"
