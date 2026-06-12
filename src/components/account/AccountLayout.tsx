@@ -1,5 +1,8 @@
+import { useEffect } from "react";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { User, Shield, Smartphone, Activity, KeyRound, CreditCard } from "lucide-react";
+import { ACCOUNT_NAV_PREFETCH, prefetchAccountPage } from "@/lib/account/account-queries";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -13,6 +16,12 @@ const NAV = [
 
 export function AccountLayout() {
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    void prefetchAccountPage(queryClient, "profile");
+  }, [queryClient]);
+
   return (
     <div className="h-full flex min-w-0">
       <aside className="w-56 shrink-0 p-4 border-r border-hairline">
@@ -25,6 +34,10 @@ export function AccountLayout() {
               <Link
                 key={n.to}
                 to={n.to}
+                onMouseEnter={() => {
+                  const page = ACCOUNT_NAV_PREFETCH[n.to];
+                  if (page) void prefetchAccountPage(queryClient, page);
+                }}
                 className={cn(
                   "flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm",
                   active

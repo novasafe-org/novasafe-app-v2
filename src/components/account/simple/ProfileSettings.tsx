@@ -1,6 +1,6 @@
 import { Sun, Moon, Monitor } from "lucide-react";
 import { toast } from "sonner";
-import type { loadProfileDashboardAction } from "@/lib/account/server-actions";
+import type { loadProfileAction } from "@/lib/account/server-actions";
 import { formatPlanLabel } from "@/lib/billing/subscription-display";
 import { deriveInitials, formatMemberSince } from "@/components/account/profile/profile-helpers";
 import { useVault, type Theme } from "@/lib/vault-store";
@@ -13,7 +13,7 @@ import {
   StatusBadge,
 } from "./settings-ui";
 
-type ProfileData = Awaited<ReturnType<typeof loadProfileDashboardAction>>;
+type ProfileData = Awaited<ReturnType<typeof loadProfileAction>>;
 
 export function ProfileSettings({
   user,

@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useRouter } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { accountQueryKeys } from "@/lib/account/account-queries";
 import type { loadSecurityAction } from "@/lib/account/server-actions";
 import {
   changeMasterPasswordAction,
@@ -29,7 +30,7 @@ function securityStatus(
 }
 
 export function SecuritySettings({ data }: { data: SecurityData }) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
   const status = securityStatus(data);
   const { settings, activeSessions } = data;
@@ -44,7 +45,7 @@ export function SecuritySettings({ data }: { data: SecurityData }) {
         data: { currentPassword, newPassword },
       });
       toast.success(result.message || "Password updated.");
-      await router.invalidate();
+      await queryClient.invalidateQueries({ queryKey: accountQueryKeys.security });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update password.");
     } finally {
@@ -84,7 +85,10 @@ export function SecuritySettings({ data }: { data: SecurityData }) {
     try {
       const result = await revokeOtherSessionsAction();
       toast.success(result.message || "Signed out all other devices.");
-      await router.invalidate();
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: accountQueryKeys.security }),
+        queryClient.invalidateQueries({ queryKey: accountQueryKeys.devices }),
+      ]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to sign out devices.");
     } finally {

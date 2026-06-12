@@ -312,12 +312,29 @@ export const createExportAction = createServerFn({ method: "POST" }).handler(asy
   return settingsApi.createExport(token);
 });
 
-export const loadRecoveryAction = createServerFn({ method: "GET" }).handler(async () => {
-  const data = await fetchRecoveryCenterData(requireToken());
+export const loadProfileAction = createServerFn({ method: "GET" }).handler(async () => {
+  const token = requireToken();
+  const [subscriptionRes, accountRes] = await Promise.all([
+    subscriptionsApi.getState(token),
+    settingsApi.getAccountSummary(token),
+  ]);
   return {
-    summary: data.summary,
-    history: data.exportHistory,
+    subscription: subscriptionRes.data,
+    account: accountRes.summary,
   };
+});
+
+export const loadRecoveryAction = createServerFn({ method: "GET" }).handler(async () => {
+  const token = requireToken();
+  const exportRes = await settingsApi.getExportHistory(token).catch(() => ({
+    history: [] as Array<{
+      id: string;
+      format?: string;
+      status?: string;
+      createdAt?: string;
+    }>,
+  }));
+  return { history: exportRes.history || [] };
 });
 
 async function fetchRecoveryCenterData(token: string) {
@@ -460,9 +477,39 @@ async function fetchAuditCenterData(token: string) {
   };
 }
 
+const EMPTY_OVERVIEW = {
+  totalItems: 0,
+  weakPasswordsCount: 0,
+  reusedPasswordsCount: 0,
+  breachedPasswordsCount: 0,
+  recentlyUsed: [] as Array<{
+    id: string;
+    title?: string;
+    category?: string;
+    updatedAt?: string;
+  }>,
+};
+
 export const loadActivityAction = createServerFn({ method: "GET" }).handler(async () => {
-  const data = await fetchAuditCenterData(requireToken());
-  const activity = data.events.slice(0, 50).map((e) => ({
+  const token = requireToken();
+  const [membership, sessionsRes, settingsRes, exportRes] = await Promise.all([
+    subscriptionsApi.getMembership(token),
+    settingsApi.getSessions(token),
+    settingsApi.getSettings(token),
+    settingsApi.getExportHistory(token).catch(() => ({
+      history: [] as Array<{ id: string; createdAt?: string; fileName?: string }>,
+    })),
+  ]);
+
+  const events = buildAuditEvents({
+    sessions: sessionsRes.sessions || [],
+    overview: EMPTY_OVERVIEW,
+    billingActivity: membership.data.recentActivity || [],
+    exportHistory: exportRes.history || [],
+    settings: settingsRes.settings,
+  });
+
+  const activity = events.slice(0, 50).map((e) => ({
     id: e.id,
     kind:
       e.category === "login" || e.category === "devices"

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function SettingsPage({
@@ -134,6 +135,52 @@ export function StatusBadge({
 
 export function SimpleList({ children }: { children: ReactNode }) {
   return <div className="divide-y divide-hairline">{children}</div>;
+}
+
+export function SettingsPageSkeleton({ cards = 3 }: { cards?: number }) {
+  return (
+    <div className="p-6 max-w-2xl mx-auto space-y-6 pb-10 animate-pulse">
+      <div>
+        <div className="h-7 w-32 rounded-lg bg-muted/70" />
+        <div className="h-4 w-64 rounded-lg bg-muted/60 mt-2" />
+      </div>
+      {Array.from({ length: cards }).map((_, i) => (
+        <div key={i} className="rounded-2xl border border-hairline bg-surface p-5 space-y-4">
+          <div className="h-4 w-28 rounded bg-muted/70" />
+          <div className="h-10 rounded-xl bg-muted/60" />
+          <div className="h-10 rounded-xl bg-muted/60" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function SettingsQueryError({
+  message = "Couldn't load this page. Please try again.",
+  onRetry,
+}: {
+  message?: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="p-6 max-w-2xl mx-auto pb-10">
+      <SettingsCard>
+        <p className="text-sm text-ink-muted">{message}</p>
+        <div className="mt-3">
+          <SettingsButton onClick={onRetry}>Try again</SettingsButton>
+        </div>
+      </SettingsCard>
+    </div>
+  );
+}
+
+export function SettingsQueryLoading({ label = "Loading…" }: { label?: string }) {
+  return (
+    <div className="p-6 max-w-2xl mx-auto flex items-center gap-2 text-sm text-ink-muted">
+      <Loader2 className="size-4 animate-spin" />
+      {label}
+    </div>
+  );
 }
 
 export function SimpleListItem({

@@ -1,13 +1,16 @@
 import { useEffect, useRef } from "react";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { z } from "zod";
 import { BillingSettings } from "@/components/account/simple/BillingSettings";
-import { buildAppUrl, buildManageBillingUrl, buildUpgradeUrl } from "@/config";
 import {
-  loadMembershipAction,
-  syncSubscriptionAfterUpgradeAction,
-} from "@/lib/account/server-actions";
+  SettingsPageSkeleton,
+  SettingsQueryError,
+} from "@/components/account/simple/settings-ui";
+import { accountQueryKeys, useBillingQuery } from "@/lib/account/account-queries";
+import { buildAppUrl, buildManageBillingUrl, buildUpgradeUrl } from "@/config";
+import { syncSubscriptionAfterUpgradeAction } from "@/lib/account/server-actions";
 import { normalizeSubscriptionState } from "@/lib/billing/subscription-display";
 
 const billingSearchSchema = z.object({
@@ -19,12 +22,10 @@ const billingSearchSchema = z.object({
 export const Route = createFileRoute("/_app/account/billing")({
   head: () => ({ meta: [{ title: "Billing — NovaSafe" }] }),
   validateSearch: (search) => billingSearchSchema.parse(search),
-  staleTime: 60_000,
-  loader: async () => loadMembershipAction(),
   component: function BillingRoute() {
-    const loaderData = Route.useLoaderData();
+    const query = useBillingQuery();
+    const queryClient = useQueryClient();
     const { upgraded, billingSynced, portalError } = Route.useSearch();
-    const router = useRouter();
     const refreshedRef = useRef(false);
     const portalToastRef = useRef(false);
     const billingReturnUrl = buildAppUrl({ path: "/account/billing" });
@@ -47,12 +48,12 @@ export const Route = createFileRoute("/_app/account/billing")({
 
     useEffect(() => {
       const shouldSync = upgraded === "1" || billingSynced === "1";
-      if (!shouldSync || refreshedRef.current || !loaderData.ok) return;
+      if (!shouldSync || refreshedRef.current) return;
       refreshedRef.current = true;
       (async () => {
         try {
           await syncSubscriptionAfterUpgradeAction();
-          await router.invalidate();
+          await queryClient.invalidateQueries({ queryKey: accountQueryKeys.billing });
           toast.success(
             upgraded === "1"
               ? "Welcome to NovaSafe Pro — your features are unlocked."
@@ -71,7 +72,25 @@ export const Route = createFileRoute("/_app/account/billing")({
           }
         }
       })();
-    }, [upgraded, billingSynced, loaderData.ok, router]);
+    }, [upgraded, billingSynced, queryClient]);
+
+    if (!query.data && query.isFetching) {
+      return <SettingsPageSkeleton cards={2} />;
+    }
+
+    if (query.isError) {
+      return (
+        <SettingsQueryError
+          onRetry={() => void query.refetch()}
+          message={query.error instanceof Error ? query.error.message : undefined}
+        />
+      );
+    }
+
+    const loaderData = query.data;
+    if (!loaderData) {
+      return <SettingsPageSkeleton cards={2} />;
+    }
 
     if (!loaderData.ok) {
       return (
@@ -82,7 +101,7 @@ export const Route = createFileRoute("/_app/account/billing")({
           upgradeUrl={upgradeUrl}
           manageUrl={manageUrl}
           errorMessage={loaderData.message}
-          onRetry={() => void router.invalidate()}
+          onRetry={() => void query.refetch()}
         />
       );
     }

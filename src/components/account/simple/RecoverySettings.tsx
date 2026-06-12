@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useRouter } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { accountQueryKeys } from "@/lib/account/account-queries";
 import type { loadRecoveryAction } from "@/lib/account/server-actions";
 import { createExportAction } from "@/lib/account/server-actions";
 import {
@@ -34,7 +35,7 @@ const GUIDES = [
 ] as const;
 
 export function RecoverySettings({ data }: { data: RecoveryData }) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [localKit, setLocalKit] = useState<string | null>(null);
 
@@ -47,7 +48,7 @@ export function RecoverySettings({ data }: { data: RecoveryData }) {
       await createExportAction();
       setLocalKit(generateLocalRecoveryKit());
       toast.success("Recovery kit created. Download and store it offline.");
-      await router.invalidate();
+      await queryClient.invalidateQueries({ queryKey: accountQueryKeys.recovery });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to generate recovery kit.");
     } finally {
