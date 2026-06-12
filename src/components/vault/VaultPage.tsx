@@ -532,7 +532,8 @@ function Inspector({
               />
             ))}
 
-          {item.password !== undefined && (
+          {/* Not necessary for MVP */}
+          {/* {item.password !== undefined && (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-ink-muted">Strength</span>
@@ -561,7 +562,7 @@ function Inspector({
                 ))}
               </div>
             </div>
-          )}
+          )} */}
 
           {item.url &&
             (editing ? (
@@ -626,7 +627,8 @@ function Inspector({
             </div>
           )}
 
-          <Section title="Security overview">
+          {/* Security overview section hidden until product enables it */}
+          {/* <Section title="Security overview">
             <div className="grid grid-cols-3 gap-2 text-center">
               <Stat
                 label="Strength"
@@ -644,7 +646,7 @@ function Inspector({
                 tone={item.otpSecret ? "good" : "warn"}
               />
             </div>
-          </Section>
+          </Section> */}
 
           {editing ? (
             <CustomFieldsEditor fields={customFieldsDraft} onChange={setCustomFieldsDraft} />

@@ -98,7 +98,7 @@ export function Sidebar({ onNew }: { onNew?: () => void }) {
         >
           {theme === "dark" ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
         </button>
-        <Link
+        {/* <Link
           to="/account/profile"
           className={cn(
             "size-10 rounded-xl grid place-items-center transition",
@@ -109,14 +109,14 @@ export function Sidebar({ onNew }: { onNew?: () => void }) {
           title="Account"
         >
           <Settings className="size-[18px]" />
-        </Link>
-        <Link
+        </Link> */}
+        {/* <Link
           to="/account/profile"
           className="size-9 rounded-full brand-gradient grid place-items-center text-white text-xs font-semibold mt-1"
           title={fullName}
         >
           {initials}
-        </Link>
+        </Link> */}
       </div>
     </aside>
   );
