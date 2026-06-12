@@ -105,6 +105,111 @@ export const loadSecurityAction = createServerFn({ method: "GET" }).handler(
   },
 );
 
+export const loadSecurityCenterAction = createServerFn({ method: "GET" }).handler(async () => {
+  const token = requireToken();
+  const [settingsRes, securityRes, overviewRes, sessionsRes, exportRes] = await Promise.all([
+    settingsApi.getSettings(token),
+    dashboardApi.getSecuritySummary(token),
+    dashboardApi.getOverview(token),
+    settingsApi.getSessions(token),
+    settingsApi.getExportHistory(token).catch(() => ({
+      history: [] as Array<{ id: string; createdAt?: string; status?: string }>,
+    })),
+  ]);
+
+  const settings = settingsRes.settings;
+  const security = securityRes.data;
+  const overview = overviewRes.data;
+  const sessions = sessionsRes.sessions || [];
+  const exportHistory = exportRes.history || [];
+  const overviewSecurity = sessionsRes.securityOverview;
+
+  const timeline: Array<{
+    id: string;
+    title: string;
+    at: number;
+    severity: "info" | "success" | "warning" | "critical";
+    type: string;
+  }> = [];
+
+  if (settings.twoFactorEnabled) {
+    timeline.push({
+      id: "2fa-enabled",
+      title: "Two-factor authentication enabled",
+      at: settings.updatedAt ? new Date(settings.updatedAt).getTime() : Date.now(),
+      severity: "success",
+      type: "2fa",
+    });
+  }
+
+  for (const entry of exportHistory.slice(0, 3)) {
+    const ts = entry.createdAt ? new Date(entry.createdAt).getTime() : Date.now();
+    timeline.push({
+      id: `export-${entry.id}`,
+      title: "Recovery kit generated",
+      at: ts,
+      severity: "success",
+      type: "recovery",
+    });
+  }
+
+  if (settings.updatedAt && settings.hasPassword) {
+    timeline.push({
+      id: "password-updated",
+      title: "Master password updated",
+      at: new Date(settings.updatedAt).getTime(),
+      severity: "info",
+      type: "password",
+    });
+  }
+
+  for (const session of sessions) {
+    const ts = session.lastActivity
+      ? new Date(session.lastActivity).getTime()
+      : session.createdAt
+        ? new Date(session.createdAt).getTime()
+        : Date.now();
+    timeline.push({
+      id: `session-${session.id}`,
+      title: session.isCurrent
+        ? "Successful login on this device"
+        : `Session activity: ${session.parsedDevice?.displayName || "Unknown device"}`,
+      at: ts,
+      severity: session.trustState === "trusted" ? "success" : "warning",
+      type: session.isCurrent ? "login" : "device",
+    });
+  }
+
+  timeline.sort((a, b) => b.at - a.at);
+
+  const trustedDevices =
+    overviewSecurity?.trustedDevices ?? sessions.filter((s) => s.trustState === "trusted").length;
+  const suspiciousDevices = overviewSecurity?.suspiciousSessions ?? 0;
+  const pendingDevices = Math.max(
+    0,
+    sessions.filter((s) => !s.isCurrent && s.trustState !== "trusted").length - suspiciousDevices,
+  );
+
+  const currentSession = sessions.find((s) => s.isCurrent) ?? sessions[0];
+
+  return {
+    settings,
+    security,
+    overview,
+    sessions,
+    exportHistory,
+    timeline: timeline.slice(0, 8),
+    deviceStats: {
+      trusted: trustedDevices,
+      pending: pendingDevices,
+      suspicious: suspiciousDevices,
+      revoked: 0,
+    },
+    activeSessions: overviewSecurity?.activeSessions ?? sessions.length,
+    currentSession,
+  };
+});
+
 const toggleTwoFactorSchema = z.object({ enabled: z.boolean() });
 export const toggleTwoFactorAction = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => toggleTwoFactorSchema.parse(input))
