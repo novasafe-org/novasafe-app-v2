@@ -5,11 +5,10 @@ import {
   Eye,
   EyeOff,
   ExternalLink,
-  MoreHorizontal,
   Archive,
   Trash2,
-  Share2,
   RefreshCw,
+  Loader2,
   Files,
   Globe,
   Pencil,
@@ -342,15 +341,16 @@ function Inspector({
   const [revealPassword, setRevealPassword] = useState(false);
   const [customFieldsDraft, setCustomFieldsDraft] = useState<CustomField[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [saving, setSaving] = useState(false);
   const displayLastOpenedRef = useRef(item.lastOpenedAt);
   const [displayLastOpenedAt, setDisplayLastOpenedAt] = useState(item.lastOpenedAt);
   const updateItem = useVault((s) => s.updateItem);
-  const openShare = useUI((s) => s.openShare);
   const M = TYPE_META[item.type];
   const str = strength(item.password);
 
   useEffect(() => {
     setEditing(false);
+    setSaving(false);
     setRevealPassword(false);
     setCustomFieldsDraft([]);
     displayLastOpenedRef.current = item.lastOpenedAt;
@@ -394,7 +394,9 @@ function Inspector({
   }
 
   async function toggleEditing() {
+    if (saving) return;
     if (editing) {
+      setSaving(true);
       try {
         const result = await syncCustomFieldsAction({
           data: {
@@ -404,12 +406,15 @@ function Inspector({
           },
         });
         onUpsert(result.item);
+        setEditing(false);
       } catch (err) {
         toast.error(toActionMessage(err));
-        return;
+      } finally {
+        setSaving(false);
       }
+      return;
     }
-    setEditing((v) => !v);
+    setEditing(true);
   }
 
   async function handleDeletePasswordVersion(versionId: string) {
@@ -455,14 +460,23 @@ function Inspector({
             <button
               type="button"
               onClick={() => void toggleEditing()}
+              disabled={saving}
               className={cn(
                 "size-9 rounded-lg grid place-items-center transition",
                 editing ? "bg-accent text-brand-ink" : "hover:bg-muted",
+                saving && "opacity-80 cursor-wait",
               )}
-              title={editing ? "Done editing" : "Edit item"}
+              title={saving ? "Saving…" : editing ? "Save changes" : "Edit item"}
               aria-pressed={editing}
+              aria-busy={saving}
             >
-              {editing ? <Check className="size-4" /> : <Pencil className="size-4" />}
+              {saving ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : editing ? (
+                <Check className="size-4" />
+              ) : (
+                <Pencil className="size-4" />
+              )}
             </button>
             <button
               type="button"
@@ -474,17 +488,6 @@ function Inspector({
               className="size-9 rounded-lg hover:bg-muted grid place-items-center"
             >
               <Star className={cn("size-4", item.favorite && "fill-warning text-warning")} />
-            </button>
-            <button
-              type="button"
-              onClick={() => openShare(item.title)}
-              className="size-9 rounded-lg hover:bg-muted grid place-items-center"
-              title="Share"
-            >
-              <Share2 className="size-4" />
-            </button>
-            <button type="button" className="size-9 rounded-lg hover:bg-muted grid place-items-center">
-              <MoreHorizontal className="size-4" />
             </button>
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-ink-muted">
