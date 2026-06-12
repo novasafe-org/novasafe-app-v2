@@ -11,13 +11,22 @@ export interface SettingsEnvelope<T extends Record<string, unknown>> {
 export interface SessionDevice {
   id: string;
   isCurrent: boolean;
+  deviceName?: string;
+  platform?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  source?: string;
   locationLabel?: string;
   createdAt?: string;
   lastActivity?: string;
+  activityState?: "recently_active" | "offline";
   parsedDevice?: {
     displayName?: string;
     platform?: string;
     os?: string;
+    browser?: string;
+    deviceType?: "desktop" | "mobile" | "tablet";
+    model?: string | null;
   };
   trustState?: string;
 }

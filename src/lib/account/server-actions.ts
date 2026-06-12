@@ -54,6 +54,43 @@ export const loadDevicesAction = createServerFn({ method: "GET" }).handler(async
   return settingsApi.getSessions(token);
 });
 
+export const loadDeviceTrustCenterAction = createServerFn({ method: "GET" }).handler(async () => {
+  const token = requireToken();
+  const [sessionsRes, settingsRes] = await Promise.all([
+    settingsApi.getSessions(token),
+    settingsApi.getSettings(token),
+  ]);
+
+  const sessions = sessionsRes.sessions || [];
+  const overview = sessionsRes.securityOverview;
+  const trusted =
+    overview?.trustedDevices ?? sessions.filter((s) => s.trustState === "trusted" || s.isCurrent).length;
+  const suspicious =
+    overview?.suspiciousSessions ??
+    sessions.filter(
+      (s) => !s.isCurrent && s.trustState === "needs_verification" && s.activityState !== "recently_active",
+    ).length;
+  const pending = sessions.filter(
+    (s) =>
+      !s.isCurrent &&
+      s.trustState === "needs_verification" &&
+      s.activityState === "recently_active",
+  ).length;
+
+  return {
+    sessions,
+    count: sessionsRes.count,
+    securityOverview: overview,
+    settings: settingsRes.settings,
+    stats: {
+      trusted,
+      pending,
+      activeSessions: overview?.activeSessions ?? sessions.length,
+      suspicious,
+    },
+  };
+});
+
 const sessionIdSchema = z.object({ sessionId: z.string().min(1) });
 
 export const revokeDeviceSessionAction = createServerFn({ method: "POST" })
