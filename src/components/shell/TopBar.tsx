@@ -37,7 +37,7 @@ export function TopBar({
           </kbd>
         </label>
       </div>
-      <div className="flex items-center gap-1.5 shrink-0">
+      <div className="ml-auto flex items-center gap-1.5 shrink-0">
         <button
           type="button"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}

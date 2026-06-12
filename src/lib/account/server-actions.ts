@@ -146,6 +146,74 @@ export const deleteAccountAction = createServerFn({ method: "POST" }).handler(as
   return settingsApi.deleteAccount(token);
 });
 
+export const loadProfileDashboardAction = createServerFn({ method: "GET" }).handler(async () => {
+  const token = requireToken();
+  const [settingsRes, subscriptionRes, securityRes, overviewRes, sessionsRes, accountRes, exportRes] =
+    await Promise.all([
+      settingsApi.getSettings(token),
+      subscriptionsApi.getState(token),
+      dashboardApi.getSecuritySummary(token),
+      dashboardApi.getOverview(token),
+      settingsApi.getSessions(token),
+      settingsApi.getAccountSummary(token),
+      settingsApi.getExportHistory(token).catch(() => ({ history: [] as Array<{ id: string }> })),
+    ]);
+
+  const settings = settingsRes.settings;
+  const subscription = subscriptionRes.data;
+  const security = securityRes.data;
+  const overview = overviewRes.data;
+  const sessions = sessionsRes.sessions || [];
+  const account = accountRes.summary;
+  const exportHistory = exportRes.history || [];
+
+  const events: Array<{
+    id: string;
+    kind: "security" | "login" | "item" | "share";
+    message: string;
+    at: number;
+  }> = [];
+
+  for (const item of overview.recentlyUsed || []) {
+    const ts = item.updatedAt ? new Date(item.updatedAt).getTime() : Date.now();
+    events.push({
+      id: `item-${item.id}-${ts}`,
+      kind: "item",
+      message: `${item.title || "Vault item"} updated`,
+      at: ts,
+    });
+  }
+
+  for (const session of sessions) {
+    const ts = session.lastActivity ? new Date(session.lastActivity).getTime() : Date.now();
+    events.push({
+      id: `session-${session.id}-${ts}`,
+      kind: "login",
+      message: `Sign-in from ${session.parsedDevice?.displayName || "Unknown device"}`,
+      at: ts,
+    });
+  }
+
+  events.sort((a, b) => b.at - a.at);
+
+  const trustedDevices =
+    sessionsRes.securityOverview?.trustedDevices ??
+    sessions.filter((s) => s.trustState === "trusted").length;
+
+  return {
+    settings,
+    subscription,
+    security,
+    overview,
+    sessions,
+    account,
+    exportHistory,
+    activity: events.slice(0, 5),
+    trustedDevices,
+    activeSessions: sessionsRes.securityOverview?.activeSessions ?? sessions.length,
+  };
+});
+
 export const loadActivityAction = createServerFn({ method: "GET" }).handler(async () => {
   const token = requireToken();
   const [membership, overview, sessions] = await Promise.all([
