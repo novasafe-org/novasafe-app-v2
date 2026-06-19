@@ -29,3 +29,10 @@ export function maskValue(v: string, visible = false) {
   if (visible || !v) return v;
   return "•".repeat(Math.min(v.length, 18));
 }
+
+/** True when a string is only masking bullets (must never be sent as a password). */
+export function isMaskPlaceholder(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  return [...trimmed].every((ch) => ch === "•");
+}

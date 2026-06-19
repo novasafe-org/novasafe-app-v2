@@ -17,7 +17,7 @@ import {
 import { useVault } from "@/lib/vault-store";
 import { useUI } from "@/lib/ui-store";
 import { TYPE_META } from "@/lib/item-meta";
-import { generatePassword, strength, maskValue } from "@/lib/password";
+import { generatePassword, maskValue, isMaskPlaceholder } from "@/lib/password";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { VaultItem } from "@/lib/vault-types";
@@ -324,6 +324,24 @@ function EmptyInspector() {
   );
 }
 
+type EditDraft = {
+  title: string;
+  username: string;
+  password: string;
+  url: string;
+  notes: string;
+};
+
+function snapshotFromItem(item: VaultItem): EditDraft {
+  return {
+    title: item.title,
+    username: item.username ?? "",
+    password: item.password ?? "",
+    url: item.url ?? "",
+    notes: item.notes ?? "",
+  };
+}
+
 function Inspector({
   item,
   onUpsert,
@@ -342,17 +360,20 @@ function Inspector({
   const [customFieldsDraft, setCustomFieldsDraft] = useState<CustomField[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
+  const editSnapshotRef = useRef<EditDraft | null>(null);
+  const committingRef = useRef(false);
   const displayLastOpenedRef = useRef(item.lastOpenedAt);
   const [displayLastOpenedAt, setDisplayLastOpenedAt] = useState(item.lastOpenedAt);
-  const updateItem = useVault((s) => s.updateItem);
   const M = TYPE_META[item.type];
-  const str = strength(item.password);
 
   useEffect(() => {
     setEditing(false);
     setSaving(false);
     setRevealPassword(false);
     setCustomFieldsDraft([]);
+    setEditDraft(null);
+    editSnapshotRef.current = null;
     displayLastOpenedRef.current = item.lastOpenedAt;
     setDisplayLastOpenedAt(item.lastOpenedAt);
   }, [item.id]);
@@ -384,20 +405,97 @@ function Inspector({
     }
   }, [editing, item.customFields]);
 
-  async function commitPatch(patch: Record<string, unknown>) {
+  function beginEdit() {
+    const snapshot = snapshotFromItem(item);
+    editSnapshotRef.current = snapshot;
+    setEditDraft(snapshot);
+    setEditing(true);
+  }
+
+  function updateDraft<K extends keyof EditDraft>(key: K, value: EditDraft[K]) {
+    setEditDraft((draft) => (draft ? { ...draft, [key]: value } : draft));
+  }
+
+  function buildPatchFromDraft(
+    draft: EditDraft,
+    snapshot: EditDraft,
+  ): Record<string, unknown> | null {
+    const patch: Record<string, unknown> = {};
+    if (draft.title !== snapshot.title) patch.title = draft.title;
+    if (draft.username !== snapshot.username) patch.username = draft.username;
+    if (draft.url !== snapshot.url) patch.url = draft.url;
+    if (draft.notes !== snapshot.notes) patch.notes = draft.notes;
+    if (
+      draft.password !== snapshot.password &&
+      !isMaskPlaceholder(draft.password)
+    ) {
+      patch.password = draft.password;
+    }
+    return Object.keys(patch).length > 0 ? patch : null;
+  }
+
+  async function applyPatch(patch: Record<string, unknown>) {
+    const result = await onPatch(item.id, patch);
+    onUpsert(result.item);
+    if (editSnapshotRef.current) {
+      const next = { ...editSnapshotRef.current };
+      if (patch.title !== undefined) next.title = String(patch.title);
+      if (patch.username !== undefined) next.username = String(patch.username);
+      if (patch.url !== undefined) next.url = String(patch.url);
+      if (patch.notes !== undefined) next.notes = String(patch.notes);
+      if (patch.password !== undefined) {
+        next.password = result.item.password ?? String(patch.password);
+      }
+      editSnapshotRef.current = next;
+      setEditDraft(next);
+    }
+    return result;
+  }
+
+  async function commitFieldOnBlur(field: keyof EditDraft, value: string) {
+    if (!editing || committingRef.current) return;
+    const snapshot = editSnapshotRef.current;
+    if (!snapshot || value === snapshot[field]) return;
+    if (field === "password" && isMaskPlaceholder(value)) return;
+
+    const patch: Record<string, unknown> = { [field]: value };
+    committingRef.current = true;
     try {
-      const result = await onPatch(item.id, patch);
-      onUpsert(result.item);
+      await applyPatch(patch);
     } catch (err) {
       toast.error(toActionMessage(err));
+    } finally {
+      committingRef.current = false;
+    }
+  }
+
+  async function flushPendingDraft() {
+    const snapshot = editSnapshotRef.current;
+    const draft = editDraft;
+    if (!snapshot || !draft) return;
+    const patch = buildPatchFromDraft(draft, snapshot);
+    if (!patch) return;
+    await applyPatch(patch);
+  }
+
+  async function commitPatch(patch: Record<string, unknown>) {
+    if (committingRef.current) return;
+    committingRef.current = true;
+    try {
+      await applyPatch(patch);
+    } catch (err) {
+      toast.error(toActionMessage(err));
+    } finally {
+      committingRef.current = false;
     }
   }
 
   async function toggleEditing() {
-    if (saving) return;
+    if (saving || committingRef.current) return;
     if (editing) {
       setSaving(true);
       try {
+        await flushPendingDraft();
         const result = await syncCustomFieldsAction({
           data: {
             itemId: item.id,
@@ -407,6 +505,8 @@ function Inspector({
         });
         onUpsert(result.item);
         setEditing(false);
+        setEditDraft(null);
+        editSnapshotRef.current = null;
       } catch (err) {
         toast.error(toActionMessage(err));
       } finally {
@@ -414,7 +514,11 @@ function Inspector({
       }
       return;
     }
-    setEditing(true);
+    if (loadingDetails) {
+      toast.message("Loading secure fields…");
+      return;
+    }
+    beginEdit();
   }
 
   async function handleDeletePasswordVersion(versionId: string) {
@@ -441,17 +545,19 @@ function Inspector({
     }
   }
 
+  const draft = editDraft;
+
   return (
     <div className="h-full min-h-0 flex flex-col">
       <div className="shrink-0 px-4 md:px-6 pt-6 pb-4 flex items-start gap-4 border-b border-hairline">
         <ItemFavicon item={item} size={56} className="rounded-2xl" iconClassName="size-6" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            {editing ? (
+            {editing && draft ? (
               <input
-                value={item.title}
-                onChange={(e) => updateItem(item.id, { title: e.target.value })}
-                onBlur={(e) => commitPatch({ title: e.target.value })}
+                value={draft.title}
+                onChange={(e) => updateDraft("title", e.target.value)}
+                onBlur={(e) => void commitFieldOnBlur("title", e.target.value)}
                 className="text-xl font-semibold bg-transparent outline-none flex-1 min-w-0 field border-0 shadow-none px-0 h-auto"
               />
             ) : (
@@ -459,14 +565,23 @@ function Inspector({
             )}
             <button
               type="button"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => void toggleEditing()}
-              disabled={saving}
+              disabled={saving || (loadingDetails && !editing)}
               className={cn(
                 "size-9 rounded-lg grid place-items-center transition",
                 editing ? "bg-accent text-brand-ink" : "hover:bg-muted",
-                saving && "opacity-80 cursor-wait",
+                (saving || (loadingDetails && !editing)) && "opacity-80 cursor-wait",
               )}
-              title={saving ? "Saving…" : editing ? "Save changes" : "Edit item"}
+              title={
+                saving
+                  ? "Saving…"
+                  : editing
+                    ? "Save changes"
+                    : loadingDetails
+                      ? "Loading secure fields…"
+                      : "Edit item"
+              }
               aria-pressed={editing}
               aria-busy={saving}
             >
@@ -483,7 +598,7 @@ function Inspector({
               onClick={() => {
                 const next = !item.favorite;
                 onUpsert({ ...item, favorite: next });
-                commitPatch({ favorite: next });
+                void commitPatch({ favorite: next });
               }}
               className="size-9 rounded-lg hover:bg-muted grid place-items-center"
             >
@@ -508,12 +623,12 @@ function Inspector({
       <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
         <div className="mx-auto w-full px-4 md:px-6 py-6 space-y-5 lg:px-[12%] xl:px-[18%] 2xl:px-[22%]">
           {item.username !== undefined &&
-            (editing ? (
+            (editing && draft ? (
               <Row label="Username">
                 <input
-                  value={item.username ?? ""}
-                  onChange={(e) => updateItem(item.id, { username: e.target.value })}
-                  onBlur={(e) => commitPatch({ username: e.target.value })}
+                  value={draft.username}
+                  onChange={(e) => updateDraft("username", e.target.value)}
+                  onBlur={(e) => void commitFieldOnBlur("username", e.target.value)}
                   className="field"
                 />
               </Row>
@@ -522,20 +637,20 @@ function Inspector({
             ))}
 
           {item.password !== undefined &&
-            (editing ? (
+            (editing && draft ? (
               <>
                 <Row label="Password">
                   <input
-                    value={item.password ?? ""}
-                    onChange={(e) => updateItem(item.id, { password: e.target.value })}
-                    onBlur={(e) => commitPatch({ password: e.target.value })}
+                    value={draft.password}
+                    onChange={(e) => updateDraft("password", e.target.value)}
+                    onBlur={(e) => void commitFieldOnBlur("password", e.target.value)}
                     className="field mono"
                   />
                   <ActionBtn
                     onClick={() => {
                       const generated = generatePassword({ length: 20 });
-                      updateItem(item.id, { password: generated });
-                      commitPatch({ password: generated });
+                      updateDraft("password", generated);
+                      void commitFieldOnBlur("password", generated);
                       toast.success("New password generated");
                     }}
                   >
@@ -553,48 +668,16 @@ function Inspector({
               />
             ))}
 
-          {/* Not necessary for MVP */}
-          {/* {item.password !== undefined && (
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-ink-muted">Strength</span>
-                <span
-                  className={cn(
-                    "font-medium",
-                    str.score >= 3
-                      ? "text-success"
-                      : str.score === 2
-                        ? "text-warning"
-                        : "text-destructive",
-                  )}
-                >
-                  {str.label}
-                </span>
-              </div>
-              <div className="flex gap-1">
-                {[0, 1, 2, 3].map((i) => (
-                  <span
-                    key={i}
-                    className={cn(
-                      "h-1.5 flex-1 rounded-full",
-                      i < str.score ? "bg-brand" : "bg-muted",
-                    )}
-                  />
-                ))}
-              </div>
-            </div>
-          )} */}
-
           {item.url &&
-            (editing ? (
+            (editing && draft ? (
               <Row label="Website">
                 <input
-                  value={item.url}
-                  onChange={(e) => updateItem(item.id, { url: e.target.value })}
-                  onBlur={(e) => commitPatch({ url: e.target.value })}
+                  value={draft.url}
+                  onChange={(e) => updateDraft("url", e.target.value)}
+                  onBlur={(e) => void commitFieldOnBlur("url", e.target.value)}
                   className="field"
                 />
-                <ActionBtn onClick={() => window.open(item.url, "_blank")}>
+                <ActionBtn onClick={() => window.open(draft.url || item.url, "_blank")}>
                   <ExternalLink className="size-3.5" />
                 </ActionBtn>
               </Row>
@@ -626,12 +709,12 @@ function Inspector({
             </div>
           )}
 
-          {editing ? (
+          {editing && draft ? (
             <Field label="Notes">
               <textarea
-                value={item.notes ?? ""}
-                onChange={(e) => updateItem(item.id, { notes: e.target.value })}
-                onBlur={(e) => commitPatch({ notes: e.target.value })}
+                value={draft.notes}
+                onChange={(e) => updateDraft("notes", e.target.value)}
+                onBlur={(e) => void commitFieldOnBlur("notes", e.target.value)}
                 rows={3}
                 className="field resize-none py-2.5"
                 placeholder="Add notes…"
@@ -647,27 +730,6 @@ function Inspector({
               <span className="truncate">{item.url.replace(/^https?:\/\//, "")}</span>
             </div>
           )}
-
-          {/* Security overview section hidden until product enables it */}
-          {/* <Section title="Security overview">
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <Stat
-                label="Strength"
-                value={str.label}
-                tone={str.score >= 3 ? "good" : str.score === 2 ? "warn" : "bad"}
-              />
-              <Stat
-                label="Breach"
-                value={item.breached ? "Detected" : "Clean"}
-                tone={item.breached ? "bad" : "good"}
-              />
-              <Stat
-                label="2FA"
-                value={item.otpSecret ? "Enabled" : "Off"}
-                tone={item.otpSecret ? "good" : "warn"}
-              />
-            </div>
-          </Section> */}
 
           {editing ? (
             <CustomFieldsEditor fields={customFieldsDraft} onChange={setCustomFieldsDraft} />
@@ -708,7 +770,7 @@ function Inspector({
             type="button"
             onClick={() => {
               onUpsert({ ...item, archived: true });
-              commitPatch({ archived: true });
+              void commitPatch({ archived: true });
             }}
             className="h-9 px-3 rounded-lg hairline text-sm inline-flex items-center gap-1.5"
           >
