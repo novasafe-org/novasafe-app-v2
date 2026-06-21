@@ -1,23 +1,54 @@
 import { useEffect, useState } from "react";
 
-import { TYPE_META } from "@/lib/item-meta";
+import { deriveItemInitials, itemAvatarBackground } from "@/lib/item-avatar";
 import { getFavicon, resolveItemSiteUrl } from "@/lib/favicon";
 import { cn } from "@/lib/utils";
 import type { VaultItem } from "@/lib/vault-types";
 
+function ItemInitialsAvatar({
+  item,
+  size,
+  className,
+}: {
+  item: VaultItem;
+  size: number;
+  className?: string;
+}) {
+  const px = `${size}px`;
+  const seed = item.id || item.title;
+  const initials = deriveItemInitials(item.title);
+
+  return (
+    <span
+      className={cn(
+        "rounded-full grid place-items-center shrink-0 font-semibold text-white select-none",
+        className,
+      )}
+      style={{
+        width: px,
+        height: px,
+        backgroundColor: itemAvatarBackground(seed),
+        fontSize: Math.max(10, Math.round(size * 0.36)),
+        letterSpacing: "0.02em",
+      }}
+      aria-hidden
+    >
+      {initials}
+    </span>
+  );
+}
+
 export function ItemFavicon({
   item,
-  size = 36,
+  size = 28,
   className,
-  iconClassName,
 }: {
   item: VaultItem;
   size?: number;
   className?: string;
+  /** @deprecated Icons replaced by initials fallback; kept for API compatibility */
   iconClassName?: string;
 }) {
-  const M = TYPE_META[item.type];
-  const Icon = M.icon;
   const siteUrl = resolveItemSiteUrl(item);
   const [err, setErr] = useState(false);
   const px = `${size}px`;
@@ -27,14 +58,7 @@ export function ItemFavicon({
   }, [item.id, siteUrl]);
 
   if (!siteUrl || err) {
-    return (
-      <span
-        className={cn("rounded-lg grid place-items-center shrink-0", M.tint, className)}
-        style={{ width: px, height: px }}
-      >
-        <Icon className={iconClassName ?? "size-4"} />
-      </span>
-    );
+    return <ItemInitialsAvatar item={item} size={size} className={className} />;
   }
 
   const normalizedUrl = siteUrl.includes("://") ? siteUrl : `https://${siteUrl}`;
@@ -42,7 +66,7 @@ export function ItemFavicon({
   return (
     <span
       className={cn(
-        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface ring-1 ring-hairline",
+        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface ring-1 ring-hairline",
         className,
       )}
       style={{ width: px, height: px }}

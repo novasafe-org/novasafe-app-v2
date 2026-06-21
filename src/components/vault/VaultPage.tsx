@@ -174,7 +174,7 @@ function VaultLoadingSkeleton() {
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="rounded-xl border border-hairline p-3 bg-surface/70">
               <div className="flex items-center gap-3">
-                <div className="size-9 rounded-lg bg-muted/70 shrink-0" />
+                <div className="size-7 rounded-full bg-muted/70 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="h-3.5 w-2/3 rounded bg-muted/70" />
                   <div className="h-3 w-1/2 rounded bg-muted/60 mt-2" />
@@ -188,7 +188,7 @@ function VaultLoadingSkeleton() {
       <div className="flex-1 min-w-0 min-h-0 border-l border-hairline bg-surface/40 flex flex-col">
         <div className="shrink-0 px-4 md:px-6 lg:px-[10%] xl:px-[18%] pt-6 pb-4 border-b border-hairline">
           <div className="flex items-start gap-4">
-            <div className="size-14 rounded-2xl bg-muted/70 shrink-0" />
+            <div className="size-11 rounded-full bg-muted/70 shrink-0" />
             <div className="flex-1 min-w-0">
               <div className="h-6 w-48 rounded bg-muted/70" />
               <div className="h-3.5 w-64 rounded bg-muted/60 mt-3" />
@@ -265,7 +265,7 @@ function ItemList({
                         {active && (
                           <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r bg-brand" />
                         )}
-                        <ItemFavicon item={it} size={36} />
+                        <ItemFavicon item={it} size={28} />
                         <span className="flex-1 min-w-0">
                           <span className="flex items-center gap-1.5">
                             <span className="text-sm font-medium truncate">{it.title}</span>
@@ -550,7 +550,7 @@ function Inspector({
   return (
     <div className="h-full min-h-0 flex flex-col">
       <div className="shrink-0 px-4 md:px-6 pt-6 pb-4 flex items-start gap-4 border-b border-hairline">
-        <ItemFavicon item={item} size={56} className="rounded-2xl" iconClassName="size-6" />
+        <ItemFavicon item={item} size={44} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             {editing && draft ? (
