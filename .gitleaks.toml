@@ -1,0 +1,7 @@
+title = "NovaSafe app-v2"
+
+[allowlist]
+description = "Fictional demo vault seed data is not real secrets"
+paths = [
+  '''src/lib/dummy-data\.ts''',
+]
