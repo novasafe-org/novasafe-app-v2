@@ -44,6 +44,8 @@ import {
   formatVaultDate,
   groupVaultItemsByMonth,
 } from "@/lib/vault-dates";
+import { useEntitlements } from "@/lib/billing/use-entitlements";
+import { Link } from "@tanstack/react-router";
 
 const VAULT_ITEMS_QUERY_KEY = ["vault", "items"] as const;
 
@@ -355,6 +357,7 @@ function Inspector({
   onPatch: (id: string, patch: Record<string, unknown>) => Promise<{ item: VaultItem }>;
   onDeleteRemote: (id: string) => Promise<{ status: "ok" }>;
 }) {
+  const { canUsePasswordHistory } = useEntitlements();
   const [editing, setEditing] = useState(false);
   const [revealPassword, setRevealPassword] = useState(false);
   const [customFieldsDraft, setCustomFieldsDraft] = useState<CustomField[]>([]);
@@ -741,11 +744,20 @@ function Inspector({
             />
           )}
 
-          {item.password !== undefined && (
+          {item.password !== undefined && canUsePasswordHistory && (
             <PasswordHistorySection
               entries={item.history}
               onDeleteEntry={handleDeletePasswordVersion}
             />
+          )}
+
+          {item.password !== undefined && !canUsePasswordHistory && (
+            <div className="rounded-xl hairline bg-surface/60 px-3 py-3 text-xs text-ink-muted">
+              Password history is a Pro feature.{" "}
+              <Link to="/account/billing" className="text-brand font-medium hover:underline">
+                Upgrade to Pro
+              </Link>
+            </div>
           )}
 
           {loadingDetails && item.history.length === 0 && item.customFields.length === 0 && (
