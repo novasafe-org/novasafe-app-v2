@@ -5,6 +5,7 @@ import { TopBar } from "./TopBar";
 import { MobileNav } from "./MobileNav";
 import { NewItemModal } from "@/components/vault/NewItemModal";
 import { ShareModal } from "@/components/vault/ShareModal";
+import { useFeatureFlag } from "@/lib/feature-flags";
 import { useVault } from "@/lib/vault-store";
 import { useUI } from "@/lib/ui-store";
 import { useSessionTimeout } from "@/lib/auth/use-session-timeout";
@@ -12,6 +13,7 @@ import { useSessionTimeout } from "@/lib/auth/use-session-timeout";
 export function AppShell() {
   const theme = useVault((s) => s.theme);
   const { query, setQuery, newOpen, setNewOpen } = useUI();
+  const sharingEnabled = useFeatureFlag("sharing");
   useSessionTimeout();
 
   useEffect(() => {
@@ -62,7 +64,7 @@ export function AppShell() {
       </div>
       <MobileNav />
       <NewItemModal open={newOpen} onClose={() => setNewOpen(false)} />
-      <ShareModal />
+      {sharingEnabled ? <ShareModal /> : null}
     </div>
   );
 }
