@@ -4,6 +4,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/components/shell/AppShell";
 import { setClientSession, type AuthUser } from "@/lib/auth";
 import { ensureAuthenticatedUser } from "@/lib/auth/session-gate";
+import { FeatureFlagsProvider } from "@/lib/feature-flags";
 import { syncVaultScopeForUser } from "@/lib/vault-store";
 
 /**
@@ -34,7 +35,11 @@ export const Route = createFileRoute("/_app")({
 function AppLayout() {
   const { user } = Route.useRouteContext();
   useHydrateClientSession(user);
-  return <AppShell />;
+  return (
+    <FeatureFlagsProvider authenticated>
+      <AppShell />
+    </FeatureFlagsProvider>
+  );
 }
 
 function useHydrateClientSession(user: AuthUser): void {
