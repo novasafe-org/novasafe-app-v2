@@ -13,6 +13,9 @@ vendor/feature-flags
 dist
 dist-ssr
 .output
+vendor/feature-flags
+.tmp-feature-flags-sync
+public/version.json
 .vinxi
 .tanstack/**
 .nitro
