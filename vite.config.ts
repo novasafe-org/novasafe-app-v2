@@ -37,5 +37,8 @@ export default defineConfig({
     preview: {
       port: resolveDevPort(),
     },
+    ssr: {
+      noExternal: ["@novasafe/feature-flags"],
+    },
   },
 });
