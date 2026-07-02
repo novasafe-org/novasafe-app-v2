@@ -17,7 +17,8 @@ ARG GIT_BRANCH=main
 ARG REPOSITORY=novasafe-app-v2
 ARG RELEASED_AT
 
-RUN corepack enable && corepack prepare pnpm@10.18.2 --activate
+RUN corepack enable && corepack prepare pnpm@10.18.2 --activate \
+    && apk add --no-cache git
 
 WORKDIR /app
 
@@ -35,8 +36,10 @@ ENV NODE_ENV=production \
     VITE_APP_VERSION=$APP_VERSION
 
 COPY package.json pnpm-lock.yaml .npmrc ./
+COPY scripts/sync-feature-flags-catalog.mjs scripts/sync-feature-flags-catalog.mjs
 RUN --mount=type=cache,id=pnpm-store-app,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
+    node scripts/sync-feature-flags-catalog.mjs \
+    && pnpm install --frozen-lockfile
 
 COPY . .
 RUN pnpm build
