@@ -1,0 +1,3 @@
+# NS-55 — feature modules and flag SDK
+/src/features/ @novasafe-org/novasafe-app-v2
+/src/lib/feature-flags/ @novasafe-org/novasafe-app-v2

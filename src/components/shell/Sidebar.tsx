@@ -1,34 +1,13 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import {
-  Shield,
-  KeyRound,
-  ShieldCheck,
-  FileText,
-  Files,
-  Share2,
-  Star,
-  Archive,
-  // Plus,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const NAV = [
-  { to: "/vault", label: "Vault", icon: Shield },
-  { to: "/favorites", label: "Favorites", icon: Star },
-  { to: "/archive", label: "Archive", icon: Archive },
-
-  // TODO: Add these back in when we have the features
-  // { to: "/passkeys", label: "Passkeys", icon: KeyRound },
-  // { to: "/otp", label: "Authenticator", icon: ShieldCheck },
-  // { to: "/notes", label: "Secure Notes", icon: FileText },
-  // { to: "/documents", label: "Documents", icon: Files },
-  // { to: "/shared", label: "Shared", icon: Share2 },
-] as const;
+import { DESKTOP_NAV, filterNavByFlags, useFeatureFlags } from "@/lib/feature-flags";
 
 const BRAND_ICON_URL = "/brand-icon.png";
 
-export function Sidebar({ onNew }: { onNew?: () => void }) {
+export function Sidebar({ onNew: _onNew }: { onNew?: () => void }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const { flags } = useFeatureFlags();
+  const nav = filterNavByFlags(DESKTOP_NAV, flags);
   const isActive = (to: string) => path === to || (to === "/vault" && path === "/");
 
   return (
@@ -41,18 +20,8 @@ export function Sidebar({ onNew }: { onNew?: () => void }) {
         />
       </Link>
 
-      {/* New-item shortcut hidden until product enables sidebar create */}
-      {/* <button
-        onClick={onNew}
-        className="size-10 rounded-xl bg-brand text-brand-foreground grid place-items-center shadow-float hover:scale-[1.04] transition ring-brand-soft"
-        aria-label="New item"
-        title="New item (⌘N)"
-      >
-        <Plus className="size-5" />
-      </button> */}
-
       <div className="mt-2 flex flex-col gap-1">
-        {NAV.map((n) => {
+        {nav.map((n) => {
           const Icon = n.icon;
           const active = isActive(n.to);
           return (
