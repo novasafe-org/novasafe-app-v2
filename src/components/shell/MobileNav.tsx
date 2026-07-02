@@ -1,21 +1,19 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Shield, KeyRound, ShieldCheck, Files, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const TABS = [
-  { to: "/vault", label: "Vault", icon: Shield },
-  { to: "/passkeys", label: "Keys", icon: KeyRound },
-  { to: "/otp", label: "Codes", icon: ShieldCheck },
-  { to: "/documents", label: "Docs", icon: Files },
-  { to: "/account/profile", label: "Me", icon: User },
-] as const;
+import { MOBILE_NAV, filterNavByFlags, useFeatureFlags } from "@/lib/feature-flags";
 
 export function MobileNav() {
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const { flags } = useFeatureFlags();
+  const tabs = filterNavByFlags(MOBILE_NAV, flags);
+
   return (
     <nav className="md:hidden fixed bottom-3 left-3 right-3 z-40 glass-strong rounded-2xl shadow-float">
-      <ul className="grid grid-cols-5">
-        {TABS.map((t) => {
+      <ul
+        className="grid"
+        style={{ gridTemplateColumns: `repeat(${Math.max(tabs.length, 1)}, minmax(0, 1fr))` }}
+      >
+        {tabs.map((t) => {
           const Icon = t.icon;
           const active =
             path === t.to ||

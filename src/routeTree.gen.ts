@@ -12,11 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppVaultRouteImport } from './routes/_app.vault'
+import { Route as AppTeamsRouteImport } from './routes/_app.teams'
 import { Route as AppSharedRouteImport } from './routes/_app.shared'
 import { Route as AppPasskeysRouteImport } from './routes/_app.passkeys'
 import { Route as AppOtpRouteImport } from './routes/_app.otp'
 import { Route as AppNotesRouteImport } from './routes/_app.notes'
 import { Route as AppFavoritesRouteImport } from './routes/_app.favorites'
+import { Route as AppEnterpriseRouteImport } from './routes/_app.enterprise'
 import { Route as AppDocumentsRouteImport } from './routes/_app.documents'
 import { Route as AppArchiveRouteImport } from './routes/_app.archive'
 import { Route as AppAccountRouteImport } from './routes/_app.account'
@@ -43,6 +45,11 @@ const AppVaultRoute = AppVaultRouteImport.update({
   path: '/vault',
   getParentRoute: () => AppRoute,
 } as any)
+const AppTeamsRoute = AppTeamsRouteImport.update({
+  id: '/teams',
+  path: '/teams',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSharedRoute = AppSharedRouteImport.update({
   id: '/shared',
   path: '/shared',
@@ -66,6 +73,11 @@ const AppNotesRoute = AppNotesRouteImport.update({
 const AppFavoritesRoute = AppFavoritesRouteImport.update({
   id: '/favorites',
   path: '/favorites',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppEnterpriseRoute = AppEnterpriseRouteImport.update({
+  id: '/enterprise',
+  path: '/enterprise',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDocumentsRoute = AppDocumentsRouteImport.update({
@@ -129,11 +141,13 @@ export interface FileRoutesByFullPath {
   '/account': typeof AppAccountRouteWithChildren
   '/archive': typeof AppArchiveRoute
   '/documents': typeof AppDocumentsRoute
+  '/enterprise': typeof AppEnterpriseRoute
   '/favorites': typeof AppFavoritesRoute
   '/notes': typeof AppNotesRoute
   '/otp': typeof AppOtpRoute
   '/passkeys': typeof AppPasskeysRoute
   '/shared': typeof AppSharedRoute
+  '/teams': typeof AppTeamsRoute
   '/vault': typeof AppVaultRoute
   '/account/activity': typeof AppAccountActivityRoute
   '/account/appearance': typeof AppAccountAppearanceRoute
@@ -148,11 +162,13 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/archive': typeof AppArchiveRoute
   '/documents': typeof AppDocumentsRoute
+  '/enterprise': typeof AppEnterpriseRoute
   '/favorites': typeof AppFavoritesRoute
   '/notes': typeof AppNotesRoute
   '/otp': typeof AppOtpRoute
   '/passkeys': typeof AppPasskeysRoute
   '/shared': typeof AppSharedRoute
+  '/teams': typeof AppTeamsRoute
   '/vault': typeof AppVaultRoute
   '/account/activity': typeof AppAccountActivityRoute
   '/account/appearance': typeof AppAccountAppearanceRoute
@@ -170,11 +186,13 @@ export interface FileRoutesById {
   '/_app/account': typeof AppAccountRouteWithChildren
   '/_app/archive': typeof AppArchiveRoute
   '/_app/documents': typeof AppDocumentsRoute
+  '/_app/enterprise': typeof AppEnterpriseRoute
   '/_app/favorites': typeof AppFavoritesRoute
   '/_app/notes': typeof AppNotesRoute
   '/_app/otp': typeof AppOtpRoute
   '/_app/passkeys': typeof AppPasskeysRoute
   '/_app/shared': typeof AppSharedRoute
+  '/_app/teams': typeof AppTeamsRoute
   '/_app/vault': typeof AppVaultRoute
   '/_app/account/activity': typeof AppAccountActivityRoute
   '/_app/account/appearance': typeof AppAccountAppearanceRoute
@@ -192,11 +210,13 @@ export interface FileRouteTypes {
     | '/account'
     | '/archive'
     | '/documents'
+    | '/enterprise'
     | '/favorites'
     | '/notes'
     | '/otp'
     | '/passkeys'
     | '/shared'
+    | '/teams'
     | '/vault'
     | '/account/activity'
     | '/account/appearance'
@@ -211,11 +231,13 @@ export interface FileRouteTypes {
     | '/'
     | '/archive'
     | '/documents'
+    | '/enterprise'
     | '/favorites'
     | '/notes'
     | '/otp'
     | '/passkeys'
     | '/shared'
+    | '/teams'
     | '/vault'
     | '/account/activity'
     | '/account/appearance'
@@ -232,11 +254,13 @@ export interface FileRouteTypes {
     | '/_app/account'
     | '/_app/archive'
     | '/_app/documents'
+    | '/_app/enterprise'
     | '/_app/favorites'
     | '/_app/notes'
     | '/_app/otp'
     | '/_app/passkeys'
     | '/_app/shared'
+    | '/_app/teams'
     | '/_app/vault'
     | '/_app/account/activity'
     | '/_app/account/appearance'
@@ -276,6 +300,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppVaultRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/teams': {
+      id: '/_app/teams'
+      path: '/teams'
+      fullPath: '/teams'
+      preLoaderRoute: typeof AppTeamsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/shared': {
       id: '/_app/shared'
       path: '/shared'
@@ -309,6 +340,13 @@ declare module '@tanstack/react-router' {
       path: '/favorites'
       fullPath: '/favorites'
       preLoaderRoute: typeof AppFavoritesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/enterprise': {
+      id: '/_app/enterprise'
+      path: '/enterprise'
+      fullPath: '/enterprise'
+      preLoaderRoute: typeof AppEnterpriseRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/documents': {
@@ -421,11 +459,13 @@ interface AppRouteChildren {
   AppAccountRoute: typeof AppAccountRouteWithChildren
   AppArchiveRoute: typeof AppArchiveRoute
   AppDocumentsRoute: typeof AppDocumentsRoute
+  AppEnterpriseRoute: typeof AppEnterpriseRoute
   AppFavoritesRoute: typeof AppFavoritesRoute
   AppNotesRoute: typeof AppNotesRoute
   AppOtpRoute: typeof AppOtpRoute
   AppPasskeysRoute: typeof AppPasskeysRoute
   AppSharedRoute: typeof AppSharedRoute
+  AppTeamsRoute: typeof AppTeamsRoute
   AppVaultRoute: typeof AppVaultRoute
 }
 
@@ -433,11 +473,13 @@ const AppRouteChildren: AppRouteChildren = {
   AppAccountRoute: AppAccountRouteWithChildren,
   AppArchiveRoute: AppArchiveRoute,
   AppDocumentsRoute: AppDocumentsRoute,
+  AppEnterpriseRoute: AppEnterpriseRoute,
   AppFavoritesRoute: AppFavoritesRoute,
   AppNotesRoute: AppNotesRoute,
   AppOtpRoute: AppOtpRoute,
   AppPasskeysRoute: AppPasskeysRoute,
   AppSharedRoute: AppSharedRoute,
+  AppTeamsRoute: AppTeamsRoute,
   AppVaultRoute: AppVaultRoute,
 }
 
