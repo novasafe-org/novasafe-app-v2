@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.1.1
+
+### Changed
+
+Add AWS deploy workflow for app.novasafe.io
+
 ## v1.1.0
 
 ### Added
