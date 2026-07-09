@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.1.2
+
+### Changed
+
+Set App CloudFront distribution ID from CDK deploy
+
 ## v1.1.1
 
 ### Changed
