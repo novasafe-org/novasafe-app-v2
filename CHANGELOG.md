@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.1.5
+
+### Changed
+
+Set app CloudFront distribution ID (EE02IYTO7ULYE)
+
 ## v1.1.4
 
 ### Changed
