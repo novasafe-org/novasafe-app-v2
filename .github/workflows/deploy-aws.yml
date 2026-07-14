@@ -20,7 +20,7 @@ jobs:
       AWS_REGION: ${{ vars.AWS_REGION }}
       LAMBDA_FUNCTION: novasafe-prod-fn-app
       # Update after App CDK deploy (AppDistributionId output)
-      CLOUDFRONT_DISTRIBUTION_ID: REPLACE_AFTER_APP_CDK_DEPLOY
+      CLOUDFRONT_DISTRIBUTION_ID: EE02IYTO7ULYE
     steps:
       - name: Validate variables
         run: |
