@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.1.4
+
+### Changed
+
+Deploy app via zip Lambda SSR (no S3 static)
+
 ## v1.1.3
 
 ### Changed
