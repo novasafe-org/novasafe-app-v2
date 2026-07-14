@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.1.6
+
+### Changed
+
+Fix blank app: SSR auth gate + sync assets to S3
+
 ## v1.1.5
 
 ### Changed
