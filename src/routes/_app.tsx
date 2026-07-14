@@ -16,9 +16,8 @@ import { syncVaultScopeForUser } from "@/lib/vault-store";
  * context) or throws a `redirect({ href })` to the auth project — preserving
  * a `next=` round-trip so the user lands back where they tried to go.
  */
-/** Authenticated shell — client-rendered after first load for snappy in-app navigation. */
+/** Authenticated shell — SSR auth gate avoids loading assets before redirect. */
 export const Route = createFileRoute("/_app")({
-  ssr: false,
   staleTime: 5 * 60 * 1000,
   beforeLoad: async ({ location }) => {
     const result = await ensureAuthenticatedUser(location.href);

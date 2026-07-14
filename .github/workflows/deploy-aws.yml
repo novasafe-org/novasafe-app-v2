@@ -19,7 +19,7 @@ jobs:
       AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
       AWS_REGION: ${{ vars.AWS_REGION }}
       LAMBDA_FUNCTION: novasafe-prod-fn-app
-      # Update after App CDK deploy (AppDistributionId output)
+      S3_BUCKET: novasafe-prod-bucket-app-793239449172
       CLOUDFRONT_DISTRIBUTION_ID: EE02IYTO7ULYE
     steps:
       - name: Validate variables
@@ -63,6 +63,7 @@ jobs:
           sparse-checkout: |
             .github/actions/configure-aws
             .github/actions/deploy-lambda
+            .github/actions/deploy-s3
             .github/actions/invalidate-cloudfront
 
       - name: Configure AWS credentials (OIDC)
@@ -81,6 +82,13 @@ jobs:
           function-name: ${{ env.LAMBDA_FUNCTION }}
           artifact-path: dist/lambda.zip
           package-type: ssr
+
+      - name: Sync static assets to S3
+        uses: ./_novasafe-deployment/.github/actions/deploy-s3
+        with:
+          bucket-name: ${{ env.S3_BUCKET }}
+          source-directory: dist/client
+          require-index-html: "false"
 
       - name: Invalidate CloudFront cache
         uses: ./_novasafe-deployment/.github/actions/invalidate-cloudfront
