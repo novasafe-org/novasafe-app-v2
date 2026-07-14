@@ -1,47 +1,36 @@
 # AWS App Deployment
 
-Deploy **app.novasafe.io** to **AWS S3 + CloudFront** in parallel with the existing Docker/Nginx production deployment.
+Deploy **app.novasafe.io** as **TanStack Start SSR on AWS Lambda** (zip, no ECR) behind CloudFront.
 
-## Workflow
+## Architecture
 
-`.github/workflows/deploy-aws.yml` → `novasafe-deployment/deploy-frontend-aws.yml`
+```
+Browser → CloudFront → Lambda Function URL (zip SSR) → mobile-api
+```
 
-## Configuration
+## Prerequisites
 
-### Repository Variables
-
-| Variable | Example |
-|----------|---------|
-| `AWS_ROLE_ARN` | `arn:aws:iam::793239449172:role/NovaSafeGitHubDeployRole` |
-| `AWS_REGION` | `ap-south-1` |
-
-### Environment Variables
-
-Settings → Environments → **production** → **Environment variables**
-
-| Variable | Example |
-|----------|---------|
-| `VITE_APP_URL` | `https://app.novasafe.io` |
-| `VITE_AUTH_URL` | `https://start.novasafe.io` |
-| `VITE_LANDING_URL` | `https://novasafe.io` |
-| `VITE_API_URL` | `https://mobile-api.novasafe.io` |
-| `VITE_APP_VERSION` | `1.1.0` |
-
-### Stack outputs (update `deploy-aws.yml` after CDK deploy)
-
-| Field | Source |
-|-------|--------|
-| `s3-bucket` | `AppBucketName` from `novasafe-prod-app` |
-| `cloudfront-distribution-id` | `AppDistributionId` |
+1. **App** CDK stack deployed (`novasafe-prod-app`) with zip Lambda + CloudFront
+2. Repository variables: `AWS_ROLE_ARN`, `AWS_REGION` (`ap-south-1`)
+3. ACM DNS validation + Cloudflare CNAME for `app.novasafe.io`
+4. IAM role: `lambda:UpdateFunctionCode`, `cloudfront:CreateInvalidation`
 
 ## Deploy sequence
 
 1. **novasafe-deployment** → Deploy Infrastructure → **App**
-2. Add ACM DNS validation CNAMEs in Cloudflare for `app.novasafe.io`
-3. Point `app.novasafe.io` CNAME → CloudFront domain (DNS only)
-4. Update `cloudfront-distribution-id` in `deploy-aws.yml`
+2. Copy `AppDistributionId` and `AppDistributionDomainName` from stack outputs
+3. Update `CLOUDFRONT_DISTRIBUTION_ID` in `.github/workflows/deploy-aws.yml`
+4. Point `app.novasafe.io` CNAME → new CloudFront domain (if distribution was recreated)
 5. Run **Deploy AWS** in this repo
 
-## Note
+## Stack outputs
 
-App uses TanStack Start (SSR in Docker). The AWS path uploads the **client bundle** and `runtime-config.js`. Full SSR parity with Docker may require future Lambda hosting.
+| Output | Use |
+|--------|-----|
+| `AppLambdaFunctionName` | `novasafe-prod-fn-app` |
+| `AppDistributionId` | CloudFront invalidation in deploy-aws.yml |
+| `AppDistributionDomainName` | Cloudflare CNAME target |
+
+## Migrating from static S3
+
+The App stack previously used S3-only hosting (`AccessDenied` on empty bucket). Redeploying **App** CDK switches CloudFront origin to Lambda. Then run **Deploy AWS** to upload the SSR zip.

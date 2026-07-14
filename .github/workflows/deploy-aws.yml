@@ -1,13 +1,6 @@
-# Deploy app to AWS (S3 + CloudFront)
+# Deploy app SSR to AWS (zip Lambda + CloudFront, no ECR)
 #
-# Parallel deployment path — does NOT replace Docker/Nginx production CI.
-# See docs/DEPLOY_AWS.md for configuration instructions.
-#
-# Prerequisites:
-#   1. AppStack deployed via novasafe-deployment CDK
-#   2. Repository Variables: AWS_ROLE_ARN, AWS_REGION (ap-south-1)
-#   3. Environment "production" variables (VITE_* URLs — see docs/DEPLOY_AWS.md)
-#   4. ACM certificate validated; DNS pointed at CloudFront for app.novasafe.io
+# See docs/DEPLOY_AWS.md
 
 name: Deploy AWS
 
@@ -17,20 +10,92 @@ on:
 jobs:
   deploy:
     name: Deploy to AWS (production)
+    runs-on: ubuntu-latest
+    environment: production
     permissions:
       id-token: write
       contents: read
-    uses: novasafe-org/novasafe-deployment/.github/workflows/deploy-frontend-aws.yml@master
-    with:
-      application-name: novasafe-app-v2
-      build-directory: dist/client
-      node-version: '22'
-      package-manager: pnpm
-      preinstall-script: scripts/sync-feature-flags-catalog.mjs
-      github-environment: production
-      generate-runtime-config: true
-      prepare-static-shell: true
-      static-shell-title: NovaSafe
-      require-spa-index: true
-      s3-bucket: novasafe-prod-bucket-app-793239449172
-      cloudfront-distribution-id: EE02IYTO7ULYE
+    env:
+      AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      LAMBDA_FUNCTION: novasafe-prod-fn-app
+      # Update after App CDK deploy (AppDistributionId output)
+      CLOUDFRONT_DISTRIBUTION_ID: REPLACE_AFTER_APP_CDK_DEPLOY
+    steps:
+      - name: Validate variables
+        run: |
+          set -euo pipefail
+          for name in AWS_ROLE_ARN AWS_REGION; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Missing repository variable: $name"
+              exit 1
+            fi
+          done
+          if [ "$CLOUDFRONT_DISTRIBUTION_ID" = "REPLACE_AFTER_APP_CDK_DEPLOY" ]; then
+            echo "::error::Set CLOUDFRONT_DISTRIBUTION_ID in deploy-aws.yml from App CDK AppDistributionId output"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Vendor feature flags catalog
+        run: FORCE_FEATURE_FLAG_REVENDOR=1 node scripts/sync-feature-flags-catalog.mjs
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Checkout deployment actions
+        uses: actions/checkout@v4
+        with:
+          repository: novasafe-org/novasafe-deployment
+          ref: master
+          path: _novasafe-deployment
+          sparse-checkout: |
+            .github/actions/configure-aws
+            .github/actions/deploy-lambda
+            .github/actions/invalidate-cloudfront
+
+      - name: Configure AWS credentials (OIDC)
+        uses: ./_novasafe-deployment/.github/actions/configure-aws
+        with:
+          role-arn: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: novasafe-app-v2-deploy
+
+      - name: Package Lambda zip
+        run: node scripts/package-lambda.mjs --output dist/lambda.zip
+
+      - name: Deploy Lambda zip
+        uses: ./_novasafe-deployment/.github/actions/deploy-lambda
+        with:
+          function-name: ${{ env.LAMBDA_FUNCTION }}
+          artifact-path: dist/lambda.zip
+          package-type: ssr
+
+      - name: Invalidate CloudFront cache
+        uses: ./_novasafe-deployment/.github/actions/invalidate-cloudfront
+        with:
+          distribution-id: ${{ env.CLOUDFRONT_DISTRIBUTION_ID }}
+          paths: /*
+
+      - name: Smoke test /
+        run: |
+          set -euo pipefail
+          sleep 5
+          STATUS="$(curl -sS -o /tmp/app.html -w '%{http_code}' https://app.novasafe.io/)"
+          echo "HTTP $STATUS"
+          head -20 /tmp/app.html
+          if [ "$STATUS" != "200" ] && [ "$STATUS" != "302" ] && [ "$STATUS" != "307" ]; then
+            echo "::error::/ returned HTTP $STATUS"
+            exit 1
+          fi
