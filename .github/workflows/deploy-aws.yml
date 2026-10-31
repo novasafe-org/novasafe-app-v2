@@ -1,6 +1,6 @@
 # Deploy app SSR to AWS (zip Lambda + CloudFront, no ECR)
 #
-# See docs/DEPLOY_AWS.md
+# Production .env: s3://$BACKEND_CONFIG_BUCKET/app/.env (see docs/DEPLOY_AWS.md)
 
 name: Deploy AWS
 
@@ -18,6 +18,7 @@ jobs:
     env:
       AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
       AWS_REGION: ${{ vars.AWS_REGION }}
+      BACKEND_CONFIG_BUCKET: ${{ vars.BACKEND_CONFIG_BUCKET }}
       LAMBDA_FUNCTION: novasafe-prod-fn-app
       S3_BUCKET: novasafe-prod-bucket-app-793239449172
       CLOUDFRONT_DISTRIBUTION_ID: EE02IYTO7ULYE
@@ -25,14 +26,14 @@ jobs:
       - name: Validate variables
         run: |
           set -euo pipefail
-          for name in AWS_ROLE_ARN AWS_REGION; do
+          for name in AWS_ROLE_ARN AWS_REGION BACKEND_CONFIG_BUCKET; do
             if [ -z "${!name:-}" ]; then
               echo "::error::Missing repository variable: $name"
               exit 1
             fi
           done
           if [ "$CLOUDFRONT_DISTRIBUTION_ID" = "REPLACE_AFTER_APP_CDK_DEPLOY" ]; then
-            echo "::error::Set CLOUDFRONT_DISTRIBUTION_ID in deploy-aws.yml from App CDK AppDistributionId output"
+            echo "::error::Set CLOUDFRONT_DISTRIBUTION_ID in deploy-aws.yml"
             exit 1
           fi
 
@@ -54,13 +55,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Checkout deployment actions
+      - name: Checkout deployment scripts
         uses: actions/checkout@v4
         with:
           repository: novasafe-org/novasafe-deployment
           ref: master
           path: _novasafe-deployment
           sparse-checkout: |
+            .github/scripts/fetch-s3-env.sh
             .github/actions/configure-aws
             .github/actions/deploy-lambda
             .github/actions/deploy-s3
@@ -73,8 +75,20 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           role-session-name: novasafe-app-v2-deploy
 
+      - name: Fetch .env from S3 and merge Lambda overrides
+        run: |
+          set -euo pipefail
+          bash _novasafe-deployment/.github/scripts/fetch-s3-env.sh \
+            "${BACKEND_CONFIG_BUCKET}" \
+            "app/.env" \
+            /tmp/service.env
+          node .github/scripts/merge-env-files.mjs \
+            /tmp/lambda.env \
+            /tmp/service.env \
+            config/lambda.overrides.example
+
       - name: Package Lambda zip
-        run: node scripts/package-lambda.mjs --output dist/lambda.zip
+        run: node scripts/package-lambda.mjs --env-file /tmp/lambda.env --output dist/lambda.zip
 
       - name: Deploy Lambda zip
         uses: ./_novasafe-deployment/.github/actions/deploy-lambda
@@ -102,7 +116,6 @@ jobs:
           sleep 5
           STATUS="$(curl -sS -o /tmp/app.html -w '%{http_code}' https://app.novasafe.io/)"
           echo "HTTP $STATUS"
-          head -20 /tmp/app.html
           if [ "$STATUS" != "200" ] && [ "$STATUS" != "302" ] && [ "$STATUS" != "307" ]; then
             echo "::error::/ returned HTTP $STATUS"
             exit 1
