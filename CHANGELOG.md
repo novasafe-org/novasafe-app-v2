@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.1.7
+
+### Changed
+
+Deploy AWS: load app env from S3 config bucket
+
 ## v1.1.6
 
 ### Changed
