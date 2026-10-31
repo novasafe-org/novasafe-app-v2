@@ -10,6 +10,9 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const routesDir = resolve(root, 'src/routes');
 
 const REQUIRED_GUARDS = [
+  { file: '_app.vault.tsx', flag: 'vault' },
+  { file: '_app.favorites.tsx', flag: 'favorites' },
+  { file: '_app.archive.tsx', flag: 'archive' },
   { file: '_app.passkeys.tsx', flag: 'passkeys' },
   { file: '_app.otp.tsx', flag: 'otp' },
   { file: '_app.teams.tsx', flag: 'teams' },
@@ -58,4 +61,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log('[feature-flag-guards] All parked routes have feature flag guards.');
+console.log('[feature-flag-guards] All flagged routes have feature flag guards.');

@@ -25,9 +25,9 @@ export type AppNavItem = {
 };
 
 export const DESKTOP_NAV: AppNavItem[] = [
-  { to: "/vault", label: "Vault", icon: Shield },
-  { to: "/favorites", label: "Favorites", icon: Star },
-  { to: "/archive", label: "Archive", icon: Archive },
+  { to: "/vault", label: "Vault", icon: Shield, flag: "vault" },
+  { to: "/favorites", label: "Favorites", icon: Star, flag: "favorites" },
+  { to: "/archive", label: "Archive", icon: Archive, flag: "archive" },
   { to: "/passkeys", label: "Passkeys", icon: KeyRound, flag: "passkeys" },
   { to: "/otp", label: "Authenticator", icon: ShieldCheck, flag: "otp" },
   { to: "/notes", label: "Secure Notes", icon: FileText, flag: "secure_notes" },
@@ -38,7 +38,7 @@ export const DESKTOP_NAV: AppNavItem[] = [
 ];
 
 export const MOBILE_NAV: AppNavItem[] = [
-  { to: "/vault", label: "Vault", icon: Shield },
+  { to: "/vault", label: "Vault", icon: Shield, flag: "vault" },
   { to: "/passkeys", label: "Keys", icon: KeyRound, flag: "passkeys" },
   { to: "/otp", label: "Codes", icon: ShieldCheck, flag: "otp" },
   { to: "/documents", label: "Docs", icon: Files, flag: "documents" },
